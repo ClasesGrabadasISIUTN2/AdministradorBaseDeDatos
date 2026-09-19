@@ -14,6 +14,7 @@ export interface Alumno {
   dinero_debe: number;
   pack: number | null;
   condicion_pago: string | null;
+  ultima_conexion?: string | null;
   created_at: string;
   contrasenas_intentadas?: string[];
   // Computed fields

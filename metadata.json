@@ -1,6 +1,8 @@
 {
-  "name": "Panel de Administración - Base de Datos",
+  "name": "Remix Panel de Administración - Base de Datos",
   "description": "Servidor y panel web para administración integral de alumnos, reservas, pagos, horarios y clases pendientes.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, User, Mail, Phone, BookOpen, Clock, AlertCircle } from 'lucide-react';
 import { Alumno } from '../types';
+import { formatearFechaHora } from '../utils/date';
 
 interface AlumnoModalProps {
   isOpen: boolean;
@@ -252,6 +253,15 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                 placeholder="Contraseña para ingresar"
               />
+            </div>
+          )}
+
+          {alumno && (
+            <div className="bg-slate-800/60 border border-slate-700/60 rounded-lg p-2.5 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Última conexión:</span>
+              <span className="font-semibold text-slate-200">
+                {alumno.ultima_conexion ? formatearFechaHora(alumno.ultima_conexion) : 'Sin registros (nunca)'}
+              </span>
             </div>
           )}
 

@@ -76,8 +76,11 @@ async function inicializarTablasPostgres(pgPool: pg.Pool) {
         dinero_debe NUMERIC DEFAULT 0,
         pack NUMERIC DEFAULT 0,
         condicion_pago VARCHAR(100) DEFAULT 'Normal',
+        ultima_conexion TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS ultima_conexion TIMESTAMP WITH TIME ZONE;
 
       CREATE TABLE IF NOT EXISTS reservas (
         id SERIAL PRIMARY KEY,
@@ -153,6 +156,7 @@ interface LocalAlumno {
   dinero_debe: number;
   pack: number | null;
   condicion_pago: string | null;
+  ultima_conexion?: string | null;
   created_at: string;
   contrasenas_intentadas: string[];
 }
@@ -185,6 +189,11 @@ const offsetDays = (days: number) => {
   d.setDate(d.getDate() + days);
   return formatIso(d);
 };
+const offsetHoursIso = (hours: number) => {
+  const d = new Date(hoy);
+  d.setHours(d.getHours() + hours);
+  return d.toISOString();
+};
 
 let localAlumnos: LocalAlumno[] = [
   {
@@ -203,6 +212,7 @@ let localAlumnos: LocalAlumno[] = [
     dinero_debe: 0,
     pack: 20,
     condicion_pago: 'Normal',
+    ultima_conexion: offsetHoursIso(-1), // Conectado hace 1 hora
     created_at: offsetDays(-60),
     contrasenas_intentadas: [],
   },
@@ -222,6 +232,7 @@ let localAlumnos: LocalAlumno[] = [
     dinero_debe: 16000,
     pack: 0,
     condicion_pago: 'Mora',
+    ultima_conexion: offsetHoursIso(-120), // Conectada hace 5 días
     created_at: offsetDays(-45),
     contrasenas_intentadas: [],
   },
@@ -241,6 +252,7 @@ let localAlumnos: LocalAlumno[] = [
     dinero_debe: 0,
     pack: 40,
     condicion_pago: 'Normal',
+    ultima_conexion: offsetHoursIso(-14), // Conectado hoy temprano
     created_at: offsetDays(-30),
     contrasenas_intentadas: [],
   },
@@ -260,6 +272,7 @@ let localAlumnos: LocalAlumno[] = [
     dinero_debe: 8000,
     pack: 0,
     condicion_pago: 'Normal',
+    ultima_conexion: offsetHoursIso(-48), // Conectada hace 2 días
     created_at: offsetDays(-25),
     contrasenas_intentadas: [],
   },
@@ -279,6 +292,7 @@ let localAlumnos: LocalAlumno[] = [
     dinero_debe: 0,
     pack: 20,
     condicion_pago: 'Normal',
+    ultima_conexion: null, // Sin conexión previa
     created_at: offsetDays(-90),
     contrasenas_intentadas: [],
   },
@@ -298,6 +312,7 @@ let localAlumnos: LocalAlumno[] = [
     dinero_debe: 0,
     pack: 100,
     condicion_pago: 'Normal',
+    ultima_conexion: offsetHoursIso(0), // Conectado ahora
     created_at: offsetDays(-365),
     contrasenas_intentadas: [],
   }
@@ -514,16 +529,23 @@ const db = {
 
   async getAlumnos() {
     if (this.isPostgres()) {
-      const res = await pool!.query('SELECT * FROM alumnos ORDER BY nombre ASC, id ASC');
+      const res = await pool!.query('SELECT * FROM alumnos ORDER BY ultima_conexion DESC NULLS LAST, id DESC');
       return res.rows.map((a: any) => ({
         ...a,
         fecha_pago: limpiarFechaYMD(a.fecha_pago),
       }));
     }
-    return localAlumnos.map((a) => ({
-      ...a,
-      fecha_pago: limpiarFechaYMD(a.fecha_pago),
-    }));
+    return [...localAlumnos]
+      .sort((a, b) => {
+        const timeA = a.ultima_conexion ? new Date(a.ultima_conexion).getTime() : -Infinity;
+        const timeB = b.ultima_conexion ? new Date(b.ultima_conexion).getTime() : -Infinity;
+        if (timeA !== timeB) return timeB - timeA;
+        return b.id - a.id;
+      })
+      .map((a) => ({
+        ...a,
+        fecha_pago: limpiarFechaYMD(a.fecha_pago),
+      }));
   },
 
   async getAlumnoById(id: number) {
@@ -566,8 +588,8 @@ const db = {
       const res = await pool!.query(
         `INSERT INTO alumnos
           (nombre, apellido, correo, password_hash, telefono, anio_ingreso,
-           materia, estado_materia, comentario, contrasenas_intentadas, horas_a_favor, pack, condicion_pago)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+           materia, estado_materia, comentario, contrasenas_intentadas, horas_a_favor, pack, condicion_pago, ultima_conexion)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
          RETURNING *`,
         [
           data.nombre,
@@ -583,6 +605,7 @@ const db = {
           data.horas_a_favor || 0,
           data.pack || 0,
           data.condicion_pago || 'Normal',
+          data.ultima_conexion || null,
         ]
       );
       return res.rows[0];
@@ -603,6 +626,7 @@ const db = {
       dinero_debe: Number(data.dinero_debe) || 0,
       pack: Number(data.pack) || 0,
       condicion_pago: data.condicion_pago || 'Normal',
+      ultima_conexion: data.ultima_conexion || null,
       created_at: new Date().toISOString(),
       contrasenas_intentadas: [],
     };
@@ -626,8 +650,9 @@ const db = {
                 pack = COALESCE($10, pack),
                 condicion_pago = COALESCE($11, condicion_pago),
                 dinero_debe = COALESCE($12, dinero_debe),
-                fecha_pago = COALESCE($13, fecha_pago)
-          WHERE id = $14
+                fecha_pago = COALESCE($13, fecha_pago),
+                ultima_conexion = COALESCE($14, ultima_conexion)
+          WHERE id = $15
           RETURNING *`,
         [
           data.nombre,
@@ -643,6 +668,7 @@ const db = {
           data.condicion_pago,
           data.dinero_debe !== undefined ? data.dinero_debe : null,
           data.fecha_pago !== undefined ? data.fecha_pago : null,
+          data.ultima_conexion !== undefined ? data.ultima_conexion : null,
           id,
         ]
       );
@@ -654,6 +680,7 @@ const db = {
       ...localAlumnos[idx],
       ...data,
       correo: data.correo ? data.correo.toLowerCase().trim() : localAlumnos[idx].correo,
+      ultima_conexion: data.ultima_conexion !== undefined ? data.ultima_conexion : localAlumnos[idx].ultima_conexion,
     };
     return localAlumnos[idx];
   },
@@ -1371,6 +1398,10 @@ app.get('/', async (req: Request, res: Response, next) => {
       if (!passwordOk) {
         return res.json({ sesion: false, error: 'Contraseña incorrecta.' });
       }
+
+      // Registrar última conexión del usuario al autenticarse
+      const ahoraIso = new Date().toISOString();
+      await db.updateAlumno(alumno.id, { ultima_conexion: ahoraIso }).catch(() => {});
 
       // Construir datos alumno
       const hoyD = new Date();

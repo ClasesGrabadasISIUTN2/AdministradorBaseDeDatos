@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Alumno, Reserva } from '../types';
 import { api } from '../services/api';
-import { formatearFecha } from '../utils/date';
+import { formatearFecha, formatearUltimaConexion } from '../utils/date';
 
 interface AlumnoFichaModalProps {
   isOpen: boolean;
@@ -224,6 +224,20 @@ export const AlumnoFichaModal: React.FC<AlumnoFichaModalProps> = ({
                 <div>
                   <span className="text-slate-500">Año de Ingreso UTN:</span>{' '}
                   <span className="font-semibold text-slate-200">{alumno.anio_ingreso || 'No registrado'}</span>
+                </div>
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-700/40 mt-1">
+                  <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <div>
+                    <span className="text-slate-500">Última Conexión:</span>{' '}
+                    <span className="font-medium text-slate-200">
+                      {formatearUltimaConexion(alumno.ultima_conexion).relativo}
+                    </span>
+                    {alumno.ultima_conexion && (
+                      <span className="text-[10px] text-slate-400 font-mono ml-1.5">
+                        ({formatearUltimaConexion(alumno.ultima_conexion).texto})
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

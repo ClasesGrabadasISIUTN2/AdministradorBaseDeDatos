@@ -106,3 +106,88 @@ export function getDiasDiferenciaHoy(fechaStr?: string | null): number {
 
   return Math.round((fechaLocal.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 }
+
+/**
+ * Formatea un timestamp o ISO string con fecha y hora: DD/MM/AAAA HH:mm
+ */
+export function formatearFechaHora(fechaStr?: string | null): string {
+  if (!fechaStr) return '-';
+  try {
+    const d = new Date(fechaStr);
+    if (isNaN(d.getTime())) return fechaStr;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return fechaStr;
+  }
+}
+
+/**
+ * Devuelve una descripción amigable de la última conexión (relativa + fecha exacta)
+ */
+export function formatearUltimaConexion(fechaStr?: string | null): {
+  texto: string;
+  relativo: string;
+  tiempoAtrasMinutos: number;
+  esReciente: boolean;
+} {
+  if (!fechaStr) {
+    return {
+      texto: 'Sin registros',
+      relativo: 'Nunca',
+      tiempoAtrasMinutos: Infinity,
+      esReciente: false,
+    };
+  }
+
+  try {
+    const d = new Date(fechaStr);
+    if (isNaN(d.getTime())) {
+      return {
+        texto: fechaStr,
+        relativo: fechaStr,
+        tiempoAtrasMinutos: Infinity,
+        esReciente: false,
+      };
+    }
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const horaStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const fechaCompleta = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${horaStr}`;
+
+    const hoy = new Date();
+    const diffMs = hoy.getTime() - d.getTime();
+    const diffMin = Math.max(0, Math.floor(diffMs / 60000));
+    const diffHoras = Math.floor(diffMs / 3600000);
+    const diffDias = Math.floor(diffMs / 86400000);
+
+    let relativo = '';
+    if (diffMin < 2) {
+      relativo = 'Ahora mismo';
+    } else if (diffMin < 60) {
+      relativo = `Hace ${diffMin} min`;
+    } else if (diffHoras < 24 && d.getDate() === hoy.getDate()) {
+      relativo = `Hoy ${horaStr}`;
+    } else if (diffDias === 1 || (diffHoras < 48 && d.getDate() === new Date(hoy.getTime() - 86400000).getDate())) {
+      relativo = `Ayer ${horaStr}`;
+    } else if (diffDias < 7) {
+      relativo = `Hace ${diffDias} días`;
+    } else {
+      relativo = `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${horaStr}`;
+    }
+
+    return {
+      texto: fechaCompleta,
+      relativo,
+      tiempoAtrasMinutos: diffMin,
+      esReciente: diffHoras < 24,
+    };
+  } catch {
+    return {
+      texto: fechaStr,
+      relativo: fechaStr,
+      tiempoAtrasMinutos: Infinity,
+      esReciente: false,
+    };
+  }
+}

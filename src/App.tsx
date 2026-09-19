@@ -17,9 +17,62 @@ import { RegistrarPagoModal } from './components/RegistrarPagoModal';
 import { api } from './services/api';
 import { Alumno, Reserva, DashboardStats, DatabaseStatus } from './types';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { ThemeId, getInitialTheme, applyTheme, THEMES, getNextTheme } from './utils/theme';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
+
+  // Visual Theme State
+  const [theme, setTheme] = useState<ThemeId>(() => {
+    const initial = getInitialTheme();
+    applyTheme(initial);
+    return initial;
+  });
+
+  const handleThemeChange = useCallback((newTheme: ThemeId) => {
+    setTheme(newTheme);
+    applyTheme(newTheme);
+    const themeName = THEMES.find((t) => t.id === newTheme)?.name || newTheme;
+    showToast(`Estilo de página cambiado a: ${themeName}`, 'success');
+  }, []);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  // Atajo de teclado global: Shift + Espacio para rotar temas
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Evitar interrumpir si el usuario está escribiendo texto en inputs, textareas o contentEditable
+      const target = e.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase();
+      if (
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      // Shift + Espacio
+      if (e.shiftKey && (e.code === 'Space' || e.key === ' ' || e.keyCode === 32)) {
+        e.preventDefault();
+        setTheme((prevTheme) => {
+          const next = getNextTheme(prevTheme);
+          applyTheme(next);
+          const themeName = THEMES.find((t) => t.id === next)?.name || next;
+          showToast(`Estilo visual: ${themeName} (Shift + Espacio)`, 'success');
+          return next;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Data State
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -250,6 +303,8 @@ export default function App() {
         onRefresh={() => loadAllData(false)}
         isRefreshing={refreshing}
         onOpenDbConfig={() => setCurrentTab('database')}
+        theme={theme}
+        onThemeChange={handleThemeChange}
       />
 
       {/* Main Layout Container */}
@@ -259,6 +314,8 @@ export default function App() {
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
           badgeCounts={badgeCounts}
+          theme={theme}
+          onThemeChange={handleThemeChange}
         />
 
         {/* Content View Area */}

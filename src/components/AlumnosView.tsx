@@ -12,9 +12,11 @@ import {
   Eye,
   AlertCircle,
   Filter,
+  Clock,
+  ArrowUpDown,
 } from 'lucide-react';
 import { Alumno } from '../types';
-import { formatearFecha } from '../utils/date';
+import { formatearFecha, formatearUltimaConexion } from '../utils/date';
 
 interface AlumnosViewProps {
   alumnos: Alumno[];
@@ -41,6 +43,8 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
   const [filterDeuda, setFilterDeuda] = useState<'all' | 'con_deuda' | 'sin_deuda'>('all');
   const [filterPack, setFilterPack] = useState<'all' | 'con_pack' | 'sin_pack'>('all');
   const [selectedMateria, setSelectedMateria] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'ultima_conexion' | 'nombre' | 'deuda' | 'horas_pack'>('ultima_conexion');
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
   const materiasUnicas = useMemo(() => {
     const set = new Set<string>();
@@ -51,7 +55,7 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
   }, [alumnos]);
 
   const filteredAlumnos = useMemo(() => {
-    return alumnos.filter((a) => {
+    const list = alumnos.filter((a) => {
       // Búsqueda
       const term = searchTerm.toLowerCase();
       const matchName = `${a.nombre} ${a.apellido || ''}`.toLowerCase().includes(term);
@@ -75,7 +79,36 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
 
       return true;
     });
-  }, [alumnos, searchTerm, filterDeuda, filterPack, selectedMateria]);
+
+    // Ordenamiento por defecto: última conexión a la más vieja (DESC NULLS LAST)
+    return list.sort((a, b) => {
+      if (sortBy === 'ultima_conexion') {
+        const timeA = a.ultima_conexion ? new Date(a.ultima_conexion).getTime() : -Infinity;
+        const timeB = b.ultima_conexion ? new Date(b.ultima_conexion).getTime() : -Infinity;
+        if (timeA !== timeB) {
+          return sortDirection === 'desc' ? timeB - timeA : timeA - timeB;
+        }
+        return b.id - a.id;
+      }
+
+      if (sortBy === 'nombre') {
+        const comp = a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+        return sortDirection === 'desc' ? -comp : comp;
+      }
+
+      if (sortBy === 'deuda') {
+        const diff = (a.deudaTotal || 0) - (b.deudaTotal || 0);
+        return sortDirection === 'desc' ? -diff : diff;
+      }
+
+      if (sortBy === 'horas_pack') {
+        const diff = (a.horas_a_favor || 0) - (b.horas_a_favor || 0);
+        return sortDirection === 'desc' ? -diff : diff;
+      }
+
+      return 0;
+    });
+  }, [alumnos, searchTerm, filterDeuda, filterPack, selectedMateria, sortBy, sortDirection]);
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -90,11 +123,16 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
       {/* Header & Action Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-4 rounded-xl">
         <div>
-          <h2 className="text-lg font-bold text-slate-100 tracking-tight">
-            Base de Datos de Alumnos / Usuarios
-          </h2>
-          <p className="text-xs text-slate-400">
-            Administración completa de perfiles, contraseñas, materias y estados de cuenta.
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-100 tracking-tight">
+              Base de Datos de Alumnos / Usuarios
+            </h2>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-950/80 text-blue-300 border border-blue-800/60">
+              {filteredAlumnos.length} {filteredAlumnos.length === 1 ? 'alumno' : 'alumnos'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Ordenados por defecto de la última conexión a la más vieja.
           </p>
         </div>
 
@@ -108,18 +146,40 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-slate-900 border border-slate-800 p-3 rounded-xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 bg-slate-900 border border-slate-800 p-3 rounded-xl">
         {/* Search */}
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por nombre, correo, materia..."
+            placeholder="Buscar por nombre, correo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500"
           />
         </div>
+
+        {/* Sort Selector */}
+        <select
+          value={`${sortBy}_${sortDirection}`}
+          onChange={(e) => {
+            const [by, dir] = e.target.value.split('_') as [any, any];
+            setSortBy(by);
+            setSortDirection(dir);
+          }}
+          className="px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-medium"
+        >
+          <option value="ultima_conexion_desc">
+            ⚡ Última conexión (Más reciente a más vieja) [Por defecto]
+          </option>
+          <option value="ultima_conexion_asc">
+            ⏳ Conexión más antigua primero
+          </option>
+          <option value="nombre_asc">🔤 Nombre: A → Z</option>
+          <option value="nombre_desc">🔤 Nombre: Z → A</option>
+          <option value="deuda_desc">💰 Mayor deuda primero</option>
+          <option value="horas_pack_desc">📦 Más horas de pack</option>
+        </select>
 
         {/* Filter Deuda */}
         <select
@@ -165,6 +225,34 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
             <thead>
               <tr className="border-b border-slate-800 bg-slate-800/40 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
                 <th className="py-3 px-4">Alumno</th>
+                <th
+                  onClick={() => {
+                    if (sortBy === 'ultima_conexion') {
+                      setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+                    } else {
+                      setSortBy('ultima_conexion');
+                      setSortDirection('desc');
+                    }
+                  }}
+                  className="py-3 px-4 cursor-pointer hover:text-slate-200 transition select-none group"
+                  title="Ordenar por última conexión"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className={sortBy === 'ultima_conexion' ? 'text-blue-400 font-bold' : ''}>
+                      Última Conexión
+                    </span>
+                    <ArrowUpDown
+                      className={`w-3.5 h-3.5 transition ${
+                        sortBy === 'ultima_conexion' ? 'text-blue-400' : 'text-slate-500 opacity-50 group-hover:opacity-100'
+                      }`}
+                    />
+                    {sortBy === 'ultima_conexion' && (
+                      <span className="text-[10px] text-blue-400 font-mono lowercase">
+                        {sortDirection === 'desc' ? '▼ reciente' : '▲ vieja'}
+                      </span>
+                    )}
+                  </div>
+                </th>
                 <th className="py-3 px-4">Contacto</th>
                 <th className="py-3 px-4">Materia & Estado</th>
                 <th className="py-3 px-4">Horas Pack</th>
@@ -176,7 +264,7 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
             <tbody className="divide-y divide-slate-800/60 text-xs">
               {filteredAlumnos.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     No se encontraron alumnos con los filtros seleccionados.
                   </td>
                 </tr>
@@ -184,6 +272,8 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
                 filteredAlumnos.map((a) => {
                   const tieneDeuda = (a.deudaTotal || 0) > 0;
                   const tienePack = (a.horas_a_favor || 0) > 0;
+                  const conexionInfo = formatearUltimaConexion(a.ultima_conexion);
+                  const nuncaConectado = !a.ultima_conexion;
 
                   return (
                     <tr key={a.id} className="hover:bg-slate-800/30 transition">
@@ -204,6 +294,40 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
                               ID: #{a.id} • Ingreso: {a.anio_ingreso || '-'}
                             </div>
                           </div>
+                        </div>
+                      </td>
+
+                      {/* Última Conexión */}
+                      <td className="py-3 px-4">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                nuncaConectado
+                                  ? 'bg-slate-600'
+                                  : conexionInfo.esReciente
+                                  ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]'
+                                  : 'bg-blue-400'
+                              }`}
+                            />
+                            <span
+                              className={`font-medium ${
+                                nuncaConectado
+                                  ? 'text-slate-500'
+                                  : conexionInfo.esReciente
+                                  ? 'text-emerald-300 font-semibold'
+                                  : 'text-slate-200'
+                              }`}
+                            >
+                              {conexionInfo.relativo}
+                            </span>
+                          </div>
+                          {!nuncaConectado && (
+                            <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-slate-500" />
+                              <span>{conexionInfo.texto}</span>
+                            </div>
+                          )}
                         </div>
                       </td>
 

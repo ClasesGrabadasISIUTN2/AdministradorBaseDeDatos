@@ -209,7 +209,7 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
                   setFechaInicio('');
                   setFechaFin('');
                 }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs transition border border-slate-700"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-slate-100 rounded-lg text-xs transition border border-slate-700"
                 title="Limpiar rango de fechas"
               >
                 <X className="w-3 h-3 text-slate-400" />
