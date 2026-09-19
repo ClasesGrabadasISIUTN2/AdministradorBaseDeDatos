@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, User, Mail, Phone, BookOpen, Clock, AlertCircle } from 'lucide-react';
 import { Alumno } from '../types';
 import { formatearFechaHora } from '../utils/date';
+import { ConfirmacionModal, DetalleConfirmacion } from './ConfirmacionModal';
 
 interface AlumnoModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmacion, setShowConfirmacion] = useState(false);
 
   useEffect(() => {
     if (alumno) {
@@ -67,28 +69,87 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
       });
     }
     setError(null);
+    setShowConfirmacion(false);
   }, [alumno, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nombre.trim() || !formData.correo.trim()) {
       setError('Nombre y correo electrónico son obligatorios.');
       return;
     }
+    setError(null);
+    setShowConfirmacion(true);
+  };
 
+  const handleConfirmedSave = async () => {
     setLoading(true);
     setError(null);
     try {
       await onSave(formData);
+      setShowConfirmacion(false);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Error al guardar los datos');
+      setShowConfirmacion(false);
     } finally {
       setLoading(false);
     }
   };
+
+  const detallesConfirmacion: DetalleConfirmacion[] = [
+    {
+      label: 'Nombre Completo',
+      valor: `${formData.nombre} ${formData.apellido || ''}`.trim(),
+      destacado: true,
+    },
+    {
+      label: 'Correo Electrónico',
+      valor: formData.correo,
+      mono: true,
+    },
+    {
+      label: 'Teléfono / WhatsApp',
+      valor: formData.telefono || 'No especificado',
+      mono: true,
+    },
+    {
+      label: 'Materia Principal',
+      valor: formData.materia || 'No especificada',
+    },
+    {
+      label: 'Estado Académico',
+      valor: formData.estado_materia,
+    },
+    {
+      label: 'Horas a Favor / Pack',
+      valor: `${formData.horas_a_favor || 0} horas`,
+      destacado: (formData.horas_a_favor || 0) > 0,
+    },
+    {
+      label: 'Condición de Pago',
+      valor: formData.condicion_pago,
+    },
+    ...(alumno
+      ? []
+      : [
+          {
+            label: 'Contraseña de Acceso',
+            valor: formData.password_hash || 'utn1234',
+            mono: true,
+          },
+        ]),
+    ...(formData.comentario
+      ? [
+          {
+            label: 'Observaciones',
+            valor: formData.comentario,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
@@ -297,6 +358,19 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
           </div>
         </form>
       </div>
+
+      <ConfirmacionModal
+        isOpen={showConfirmacion}
+        title={alumno ? 'Confirmar Modificación de Alumno' : 'Confirmar Alta de Nuevo Alumno'}
+        subtitle="Verifica que los datos del alumno sean correctos antes de guardarlos."
+        icon={<User className="w-5 h-5 text-blue-400" />}
+        detalles={detallesConfirmacion}
+        onConfirmar={handleConfirmedSave}
+        onCancelar={() => setShowConfirmacion(false)}
+        loading={loading}
+        textoConfirmar={alumno ? 'Guardar Cambios' : 'Confirmar y Registrar'}
+        colorBoton="blue"
+      />
     </div>
   );
 };

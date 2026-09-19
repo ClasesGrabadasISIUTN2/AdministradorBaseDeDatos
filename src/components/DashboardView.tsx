@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Users,
-  CalendarCheck,
   Clock,
   AlertCircle,
   TrendingUp,
@@ -11,7 +10,6 @@ import {
   CreditCard,
   ArrowRight,
   Phone,
-  DollarSign,
   CheckCircle2,
 } from 'lucide-react';
 import { DashboardStats, Alumno, Reserva } from '../types';
@@ -100,7 +98,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Total Alumnos */}
         <div
           onClick={() => onNavigate('alumnos')}
@@ -161,26 +159,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Total Recaudado */}
-        <div
-          onClick={() => onNavigate('pagos')}
-          className="bg-slate-900 border border-slate-800 hover:border-slate-700 p-4 rounded-xl cursor-pointer transition group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider">Pagos Cobrados</span>
-            <div className="p-2 rounded-lg bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 group-hover:scale-105 transition">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl font-bold text-emerald-400 font-mono truncate">
-            {formatMoney(stats?.totalRecaudado ?? 0)}
-          </div>
-          <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-            <span>Histórico pagado</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 transition" />
-          </div>
-        </div>
-
         {/* Horas Pack en Alumnos */}
         <div
           onClick={() => onNavigate('alumnos')}
@@ -198,26 +176,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
             <span>A favor de alumnos</span>
             <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition" />
-          </div>
-        </div>
-
-        {/* Total Reservas */}
-        <div
-          onClick={() => onNavigate('reservas')}
-          className="bg-slate-900 border border-slate-800 hover:border-slate-700 p-4 rounded-xl cursor-pointer transition group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider">Total Reservas</span>
-            <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 group-hover:scale-105 transition">
-              <CalendarCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-slate-100 font-mono">
-            {stats?.totalReservas ?? reservas.length}
-          </div>
-          <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-            <span>En base de datos</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-300 transition" />
           </div>
         </div>
       </div>

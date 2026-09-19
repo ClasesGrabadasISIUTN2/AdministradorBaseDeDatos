@@ -250,6 +250,11 @@ export default function App() {
     if (selectedReservaParaEditar) {
       await api.updateReserva(selectedReservaParaEditar.id, data);
       showToast('Reserva actualizada correctamente');
+    } else if (Array.isArray(data)) {
+      for (const item of data) {
+        await api.createReserva(item);
+      }
+      showToast(`Se agendaron ${data.length} reservas grupales independientes con éxito`);
     } else {
       await api.createReserva(data);
       showToast('Nueva reserva agendada con éxito');

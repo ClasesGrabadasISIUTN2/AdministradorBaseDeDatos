@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Package, Save, AlertCircle } from 'lucide-react';
 import { Alumno } from '../types';
 import { api } from '../services/api';
+import { ConfirmacionModal, DetalleConfirmacion } from './ConfirmacionModal';
 
 interface CargarPackModalProps {
   isOpen: boolean;
@@ -20,29 +21,80 @@ export const CargarPackModal: React.FC<CargarPackModalProps> = ({
   const [horasCustom, setHorasCustom] = useState<number>(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmacion, setShowConfirmacion] = useState(false);
 
   if (!isOpen || !alumno) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      await api.habilitarPack(alumno.id, tipoPack, horasCustom);
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Error al habilitar el pack');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getHorasAgregadas = () => {
     if (tipoPack === 'packExamen') return 20;
     if (tipoPack === 'packMateria') return 40;
     return horasCustom || 0;
   };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (getHorasAgregadas() <= 0) {
+      setError('La cantidad de horas debe ser mayor a 0.');
+      return;
+    }
+    setError(null);
+    setShowConfirmacion(true);
+  };
+
+  const handleConfirmedSave = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.habilitarPack(alumno.id, tipoPack, horasCustom);
+      setShowConfirmacion(false);
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Error al habilitar el pack');
+      setShowConfirmacion(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const packNombreMap = {
+    packExamen: 'Pack Examen (20 horas)',
+    packMateria: 'Pack Materia Completa (40 horas)',
+    personalizado: `Personalizado (${horasCustom} horas)`,
+  };
+
+  const detallesConfirmacion: DetalleConfirmacion[] = [
+    {
+      label: 'Alumno',
+      valor: `${alumno.nombre} ${alumno.apellido || ''}`,
+      destacado: true,
+    },
+    {
+      label: 'Correo',
+      valor: alumno.correo,
+      mono: true,
+    },
+    {
+      label: 'Modalidad de Pack',
+      valor: packNombreMap[tipoPack],
+    },
+    {
+      label: 'Horas a Acreditar',
+      valor: `+${getHorasAgregadas()} horas`,
+      destacado: true,
+      mono: true,
+    },
+    {
+      label: 'Saldo Actual',
+      valor: `${alumno.horas_a_favor || 0} horas`,
+    },
+    {
+      label: 'Nuevo Saldo Final',
+      valor: `${(alumno.horas_a_favor || 0) + getHorasAgregadas()} horas`,
+      destacado: true,
+      mono: true,
+    },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
@@ -203,6 +255,19 @@ export const CargarPackModal: React.FC<CargarPackModalProps> = ({
           </div>
         </form>
       </div>
+
+      <ConfirmacionModal
+        isOpen={showConfirmacion}
+        title="Confirmar Carga de Pack de Horas"
+        subtitle="Verifica los datos y la cantidad de horas a acreditar al alumno."
+        icon={<Package className="w-5 h-5 text-cyan-400" />}
+        detalles={detallesConfirmacion}
+        onConfirmar={handleConfirmedSave}
+        onCancelar={() => setShowConfirmacion(false)}
+        loading={loading}
+        textoConfirmar="Confirmar y Habilitar Pack"
+        colorBoton="cyan"
+      />
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { X, CreditCard, DollarSign, CheckCircle2, AlertCircle } from 'lucide-rea
 import { Alumno, Reserva } from '../types';
 import { api } from '../services/api';
 import { formatearFecha } from '../utils/date';
+import { ConfirmacionModal, DetalleConfirmacion } from './ConfirmacionModal';
 
 interface RegistrarPagoModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const RegistrarPagoModal: React.FC<RegistrarPagoModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmacion, setShowConfirmacion] = useState(false);
 
   useEffect(() => {
     if (preselectedAlumnoId) {
@@ -53,6 +55,7 @@ export const RegistrarPagoModal: React.FC<RegistrarPagoModalProps> = ({
         });
     }
     setError(null);
+    setShowConfirmacion(false);
   }, [isOpen, alumnoId]);
 
   if (!isOpen) return null;
@@ -79,25 +82,58 @@ export const RegistrarPagoModal: React.FC<RegistrarPagoModalProps> = ({
     .filter((r) => selectedReservaIds.includes(r.id))
     .reduce((sum, r) => sum + Number(r.precio || 0), 0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedReservaIds.length === 0) {
       setError('Debes seleccionar al menos una reserva para registrar el pago.');
       return;
     }
+    setError(null);
+    setShowConfirmacion(true);
+  };
 
+  const handleConfirmedSave = async () => {
     setLoading(true);
     setError(null);
     try {
       await api.registrarPago(selectedReservaIds, alumnoId, totalSeleccionado);
+      setShowConfirmacion(false);
       onSuccess();
       onClose();
     } catch (err: any) {
       setError(err.message || 'Error al registrar el pago');
+      setShowConfirmacion(false);
     } finally {
       setLoading(false);
     }
   };
+
+  const alumnoSeleccionado = alumnos.find((a) => a.id === alumnoId);
+
+  const detallesConfirmacion: DetalleConfirmacion[] = [
+    {
+      label: 'Alumno',
+      valor: alumnoSeleccionado
+        ? `${alumnoSeleccionado.nombre} ${alumnoSeleccionado.apellido || ''} (${alumnoSeleccionado.correo})`
+        : `Alumno #${alumnoId}`,
+      destacado: true,
+    },
+    {
+      label: 'Clases a Liquidar',
+      valor: `${selectedReservaIds.length} ${selectedReservaIds.length === 1 ? 'clase' : 'clases'}`,
+      destacado: true,
+    },
+    {
+      label: 'Monto Total Abonado',
+      valor: formatMoney(totalSeleccionado),
+      destacado: true,
+      mono: true,
+    },
+    {
+      label: 'Nuevo Estado de Clases',
+      valor: 'Pagadas (se descuenta deuda)',
+    },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
@@ -226,6 +262,19 @@ export const RegistrarPagoModal: React.FC<RegistrarPagoModalProps> = ({
           </div>
         </form>
       </div>
+
+      <ConfirmacionModal
+        isOpen={showConfirmacion}
+        title="Confirmar Registro de Pago"
+        subtitle="Verifica las clases y el monto total antes de asentar el cobro."
+        icon={<CreditCard className="w-5 h-5 text-emerald-400" />}
+        detalles={detallesConfirmacion}
+        onConfirmar={handleConfirmedSave}
+        onCancelar={() => setShowConfirmacion(false)}
+        loading={loading}
+        textoConfirmar="Confirmar y Asentar Pago"
+        colorBoton="emerald"
+      />
     </div>
   );
 };
