@@ -168,4 +168,40 @@ export const api = {
     }
     return res.json();
   },
+
+  // Verificación TOTP con Servidor Externo
+  async verificarTotp(code: string): Promise<{ ok: boolean; error?: string; [key: string]: any }> {
+    const trimmed = code.trim();
+    // 1. Intentar directamente contra el servidor externo
+    try {
+      const externalUrl = `https://servidormultiusuariobackup2.onrender.com/api/verificar-totp?code=${encodeURIComponent(trimmed)}`;
+      const res = await fetch(externalUrl, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data.ok === true || data.valid === true || data.valido === true || data.success === true)) {
+        return { ok: true, ...data };
+      }
+      return {
+        ok: false,
+        error: data.error || data.mensaje || data.message || 'Código de verificación inválido o expirado.',
+      };
+    } catch {
+      // 2. Si falla por CORS o red, reintentar a través del endpoint proxy local
+      try {
+        const proxyRes = await fetch(`/api/verificar-totp?code=${encodeURIComponent(trimmed)}`);
+        const proxyData = await proxyRes.json().catch(() => ({}));
+        if (proxyRes.ok && (proxyData.ok === true || proxyData.valid === true || proxyData.valido === true || proxyData.success === true)) {
+          return { ok: true, ...proxyData };
+        }
+        return {
+          ok: false,
+          error: proxyData.error || proxyData.mensaje || proxyData.message || 'Código de verificación incorrecto.',
+        };
+      } catch (proxyErr: any) {
+        throw new Error('No se pudo conectar con el servidor de autenticación TOTP. Verifica tu conexión.');
+      }
+    }
+  },
 };

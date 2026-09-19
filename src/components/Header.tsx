@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, ShieldCheck } from 'lucide-react';
+import { RefreshCw, ShieldCheck, LogOut } from 'lucide-react';
 import { DatabaseStatus } from '../types';
 import { ThemeSelector } from './ThemeSelector';
 import { ThemeId } from '../utils/theme';
@@ -11,6 +11,7 @@ interface HeaderProps {
   onOpenDbConfig?: () => void;
   theme: ThemeId;
   onThemeChange: (themeId: ThemeId) => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDbConfig,
   theme,
   onThemeChange,
+  onLogout,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-slate-100 px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
@@ -59,6 +61,16 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`} />
           </button>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-300 hover:bg-rose-900/60 transition"
+              title="Bloquear acceso / Salir"
+              aria-label="Bloquear acceso / Salir"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -86,6 +98,18 @@ export const Header: React.FC<HeaderProps> = ({
             clasesparticularesutnfrsf
           </span>
         </div>
+
+        {/* Logout / Bloquear Acceso Button */}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-950/60 hover:text-rose-300 border border-slate-700/70 hover:border-rose-800/80 text-slate-400 text-xs font-medium transition"
+            title="Bloquear panel y requerir código TOTP"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Salir</span>
+          </button>
+        )}
       </div>
     </header>
   );

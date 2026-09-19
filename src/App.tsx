@@ -18,9 +18,18 @@ import { api } from './services/api';
 import { Alumno, Reserva, DashboardStats, DatabaseStatus } from './types';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { ThemeId, getInitialTheme, applyTheme, THEMES, getNextTheme } from './utils/theme';
+import { TotpAuthScreen } from './components/TotpAuthScreen';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
+
+  // TOTP Security Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return (
+      localStorage.getItem('utn_totp_authenticated') === 'true' ||
+      sessionStorage.getItem('utn_totp_authenticated') === 'true'
+    );
+  });
 
   // Visual Theme State
   const [theme, setTheme] = useState<ThemeId>(() => {
@@ -121,6 +130,7 @@ export default function App() {
 
   // Fetch all core data
   const loadAllData = useCallback(async (silent = false) => {
+    if (!isAuthenticated) return;
     if (!silent) setRefreshing(true);
     try {
       const [st, al, res, cp, pg, db] = await Promise.all([
@@ -144,11 +154,20 @@ export default function App() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+    if (isAuthenticated) {
+      loadAllData();
+    }
+  }, [isAuthenticated, loadAllData]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('utn_totp_authenticated');
+    localStorage.removeItem('utn_totp_auth_time');
+    sessionStorage.removeItem('utn_totp_authenticated');
+    setIsAuthenticated(false);
+  };
 
   // Alumno Handlers
   const handleOpenNuevoAlumno = () => {
@@ -277,6 +296,17 @@ export default function App() {
     alumnosConDeuda: stats?.alumnosConDeuda ?? pagosData.deudasPorAlumno.length,
   };
 
+  if (!isAuthenticated) {
+    return (
+      <TotpAuthScreen
+        onAuthenticated={() => {
+          setIsAuthenticated(true);
+          showToast('Autenticación TOTP verificada. Bienvenido al sistema.', 'success');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* Toast Notification */}
@@ -305,6 +335,7 @@ export default function App() {
         onOpenDbConfig={() => setCurrentTab('database')}
         theme={theme}
         onThemeChange={handleThemeChange}
+        onLogout={handleLogout}
       />
 
       {/* Main Layout Container */}

@@ -858,6 +858,30 @@ const db = {
   }
 };
 
+// ─── AUTENTICACIÓN TOTP EXTERNA ─────────────────────────────────────────────
+app.get('/api/verificar-totp', async (req: Request, res: Response) => {
+  const code = String(req.query.code || '').trim();
+  if (!code) {
+    return res.status(400).json({ ok: false, error: 'Código de verificación no proporcionado.' });
+  }
+
+  try {
+    const targetUrl = `https://servidormultiusuariobackup2.onrender.com/api/verificar-totp?code=${encodeURIComponent(code)}`;
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    const data = await response.json();
+    return res.status(response.status).json(data);
+  } catch (err: any) {
+    console.error('Error al verificar TOTP en servidor externo:', err);
+    return res.status(502).json({
+      ok: false,
+      error: 'Error al contactar el servidor de verificación TOTP: ' + (err.message || 'Servidor no disponible'),
+    });
+  }
+});
+
 // ─── RUTAS DE ADMINISTRACIÓN REST (/api/admin/...) ──────────────────────────
 
 // 1. Estadísticas Generales del Panel
