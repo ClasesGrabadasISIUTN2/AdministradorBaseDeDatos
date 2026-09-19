@@ -14,6 +14,7 @@ import {
   PlusCircle,
 } from 'lucide-react';
 import { Alumno, Reserva } from '../types';
+import { formatearFecha } from '../utils/date';
 
 interface PagosViewProps {
   pagosData: { deudasPorAlumno: any[]; pagosRecientes: Reserva[] };
@@ -233,7 +234,7 @@ export const PagosView: React.FC<PagosViewProps> = ({
                               </span>
                               <span className="text-slate-400">•</span>
                               <span className="text-slate-200">
-                                {item.fecha_realizado || item.fecha_reservada_texto}
+                                {formatearFecha(item.fecha_realizado, { conDiaSemana: true }) || item.fecha_reservada_texto}
                               </span>
                               <span
                                 className={`text-[10px] uppercase font-semibold px-1.5 py-0.2 rounded ${
@@ -315,7 +316,7 @@ export const PagosView: React.FC<PagosViewProps> = ({
                       </span>
                     </td>
                     <td className="py-2.5 px-4 text-slate-300">
-                      {p.fecha_realizado}
+                      {formatearFecha(p.fecha_realizado, { conDiaSemana: true })}
                     </td>
                     <td className="py-2.5 px-4 font-mono font-bold text-emerald-400">
                       {formatMoney(Number(p.precio || 0))}

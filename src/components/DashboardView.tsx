@@ -15,6 +15,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { DashboardStats, Alumno, Reserva } from '../types';
+import { formatearFecha } from '../utils/date';
 
 interface DashboardViewProps {
   stats: DashboardStats | null;
@@ -272,7 +273,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                       <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                         <span className="font-medium text-slate-300">
-                          {clase.fecha_realizado}
+                          {formatearFecha(clase.fecha_realizado, { conDiaSemana: true })}
                         </span>
                         {clase.horaInicio && (
                           <>

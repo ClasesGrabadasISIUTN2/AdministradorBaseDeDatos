@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, CreditCard, DollarSign, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Alumno, Reserva } from '../types';
 import { api } from '../services/api';
+import { formatearFecha } from '../utils/date';
 
 interface RegistrarPagoModalProps {
   isOpen: boolean;
@@ -186,7 +187,7 @@ export const RegistrarPagoModal: React.FC<RegistrarPagoModalProps> = ({
                       <div>
                         <div className="font-mono font-semibold">#{r.codigo}</div>
                         <div className="text-[11px] text-slate-400">
-                          {r.fecha_realizado || r.fecha_reservada_texto} • {r.tipo_clase || 'Clase'}
+                          {formatearFecha(r.fecha_realizado, { conDiaSemana: true }) || r.fecha_reservada_texto} • {r.tipo_clase || 'Clase'}
                         </div>
                       </div>
                     </div>

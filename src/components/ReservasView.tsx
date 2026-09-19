@@ -3,6 +3,7 @@ import {
   Search,
   PlusCircle,
   Calendar,
+  CalendarRange,
   Clock,
   User,
   Users,
@@ -14,8 +15,10 @@ import {
   Edit2,
   DollarSign,
   Phone,
+  X,
 } from 'lucide-react';
 import { Reserva, Alumno } from '../types';
+import { formatearFecha, getDiasDiferenciaHoy, extraerFechaYMD } from '../utils/date';
 
 interface ReservasViewProps {
   reservas: Reserva[];
@@ -42,6 +45,8 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
   const [filterEstado, setFilterEstado] = useState<string>('all');
   const [filterTipo, setFilterTipo] = useState<string>('all');
   const [filterTiempo, setFilterTiempo] = useState<'all' | 'futuras' | 'pasadas'>('all');
+  const [fechaInicio, setFechaInicio] = useState<string>('');
+  const [fechaFin, setFechaFin] = useState<string>('');
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -52,9 +57,6 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
   };
 
   const filteredReservas = useMemo(() => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
     return reservas.filter((r) => {
       // Búsqueda
       const term = searchTerm.toLowerCase();
@@ -76,17 +78,22 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
 
       // Temporal
       if (filterTiempo !== 'all') {
-        const fecha = r.fecha_realizado ? new Date(r.fecha_realizado) : null;
-        if (fecha) {
-          fecha.setHours(0, 0, 0, 0);
-          if (filterTiempo === 'futuras' && fecha < hoy) return false;
-          if (filterTiempo === 'pasadas' && fecha >= hoy) return false;
-        }
+        const diff = getDiasDiferenciaHoy(r.fecha_realizado);
+        if (filterTiempo === 'futuras' && diff < 0) return false;
+        if (filterTiempo === 'pasadas' && diff >= 0) return false;
+      }
+
+      // Rango de fechas (Inicio y/o Fin)
+      if (fechaInicio || fechaFin) {
+        const ymd = extraerFechaYMD(r.fecha_realizado);
+        if (!ymd) return false;
+        if (fechaInicio && ymd < fechaInicio) return false;
+        if (fechaFin && ymd > fechaFin) return false;
       }
 
       return true;
     });
-  }, [reservas, searchTerm, filterEstado, filterTipo, filterTiempo]);
+  }, [reservas, searchTerm, filterEstado, filterTipo, filterTiempo, fechaInicio, fechaFin]);
 
   return (
     <div className="space-y-4">
@@ -111,56 +118,123 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
       </div>
 
       {/* Filters Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-slate-900 border border-slate-800 p-3 rounded-xl">
-        {/* Search */}
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar por código, alumno, correo..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-mono"
-          />
+      <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl space-y-3">
+        {/* Fila 1: Búsqueda y Filtros de Estado / Modalidad / Tiempo */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {/* Search */}
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar por código, alumno, correo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-mono"
+            />
+          </div>
+
+          {/* Filter Estado */}
+          <select
+            value={filterEstado}
+            onChange={(e) => setFilterEstado(e.target.value)}
+            className="px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+          >
+            <option value="all">Todos los estados</option>
+            <option value="pack">Cubiertas por Pack</option>
+            <option value="debe">Pendiente de Pago (Debe)</option>
+            <option value="pagada">Pagadas</option>
+            <option value="cancelada">Canceladas</option>
+          </select>
+
+          {/* Filter Tipo */}
+          <select
+            value={filterTipo}
+            onChange={(e) => setFilterTipo(e.target.value)}
+            className="px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+          >
+            <option value="all">Todas las modalidades</option>
+            <option value="individual">Individuales</option>
+            <option value="grupal">Grupales</option>
+            <option value="tp">Trabajo Práctico (TP)</option>
+            <option value="consulta">Consulta</option>
+            <option value="estandar">Clase Estándar</option>
+          </select>
+
+          {/* Filter Temporal */}
+          <select
+            value={filterTiempo}
+            onChange={(e: any) => setFilterTiempo(e.target.value)}
+            className="px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+          >
+            <option value="all">Todas las fechas (histórico)</option>
+            <option value="futuras">Solo próximas / futuras</option>
+            <option value="pasadas">Solo pasadas / finalizadas</option>
+          </select>
         </div>
 
-        {/* Filter Estado */}
-        <select
-          value={filterEstado}
-          onChange={(e) => setFilterEstado(e.target.value)}
-          className="px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-        >
-          <option value="all">Todos los estados</option>
-          <option value="pack">Cubiertas por Pack</option>
-          <option value="debe">Pendiente de Pago (Debe)</option>
-          <option value="pagada">Pagadas</option>
-          <option value="cancelada">Canceladas</option>
-        </select>
+        {/* Fila 2: Filtro por Rango de Fecha (Inicio y Fin) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-800/80">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mr-1">
+              <CalendarRange className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span>Rango de fechas:</span>
+            </div>
 
-        {/* Filter Tipo */}
-        <select
-          value={filterTipo}
-          onChange={(e) => setFilterTipo(e.target.value)}
-          className="px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-        >
-          <option value="all">Todas las modalidades</option>
-          <option value="individual">Individuales</option>
-          <option value="grupal">Grupales</option>
-          <option value="tp">Trabajo Práctico (TP)</option>
-          <option value="consulta">Consulta</option>
-          <option value="estandar">Clase Estándar</option>
-        </select>
+            <div className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs">
+              <span className="text-slate-400 text-[11px] font-medium">Inicio:</span>
+              <input
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                className="bg-transparent text-slate-100 text-xs focus:outline-none [color-scheme:dark] cursor-pointer"
+                title="Fecha de inicio"
+              />
+            </div>
 
-        {/* Filter Temporal */}
-        <select
-          value={filterTiempo}
-          onChange={(e: any) => setFilterTiempo(e.target.value)}
-          className="px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-        >
-          <option value="all">Todas las fechas (histórico)</option>
-          <option value="futuras">Solo próximas / futuras</option>
-          <option value="pasadas">Solo pasadas / finalizadas</option>
-        </select>
+            <div className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs">
+              <span className="text-slate-400 text-[11px] font-medium">Fin:</span>
+              <input
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                className="bg-transparent text-slate-100 text-xs focus:outline-none [color-scheme:dark] cursor-pointer"
+                title="Fecha de fin"
+              />
+            </div>
+
+            {(fechaInicio || fechaFin) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFechaInicio('');
+                  setFechaFin('');
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs transition border border-slate-700"
+                title="Limpiar rango de fechas"
+              >
+                <X className="w-3 h-3 text-slate-400" />
+                <span>Limpiar fechas</span>
+              </button>
+            )}
+          </div>
+
+          {(searchTerm || filterEstado !== 'all' || filterTipo !== 'all' || filterTiempo !== 'all' || fechaInicio || fechaFin) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setFilterEstado('all');
+                setFilterTipo('all');
+                setFilterTiempo('all');
+                setFechaInicio('');
+                setFechaFin('');
+              }}
+              className="text-[11px] text-blue-400 hover:text-blue-300 transition underline underline-offset-2 ml-auto"
+            >
+              Restablecer todos los filtros
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -198,7 +272,7 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
                         </div>
                         <div className="flex items-center gap-1.5 text-slate-300 font-medium mt-0.5">
                           <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{r.fecha_realizado || 'Fecha pendiente'}</span>
+                          <span>{formatearFecha(r.fecha_realizado, { conDiaSemana: true, textoVacio: 'Fecha pendiente' })}</span>
                           {r.horaInicio && (
                             <>
                               <Clock className="w-3 h-3 text-slate-400 ml-1 shrink-0" />

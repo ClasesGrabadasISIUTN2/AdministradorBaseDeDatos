@@ -14,6 +14,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { Alumno } from '../types';
+import { formatearFecha } from '../utils/date';
 
 interface AlumnosViewProps {
   alumnos: Alumno[];
@@ -258,7 +259,7 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
                         </div>
                         {a.fecha_pago && (
                           <div className="text-[10px] text-slate-400 mt-0.5">
-                            Desde: {a.fecha_pago}
+                            Desde: {formatearFecha(a.fecha_pago)}
                           </div>
                         )}
                       </td>

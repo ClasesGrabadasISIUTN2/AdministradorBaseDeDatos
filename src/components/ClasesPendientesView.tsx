@@ -13,6 +13,7 @@ import {
   PlusCircle,
 } from 'lucide-react';
 import { Reserva, Alumno } from '../types';
+import { formatearFecha, getDiasDiferenciaHoy } from '../utils/date';
 
 interface ClasesPendientesViewProps {
   clases: Reserva[];
@@ -31,17 +32,8 @@ export const ClasesPendientesView: React.FC<ClasesPendientesViewProps> = ({
 }) => {
   const [timelineFilter, setTimelineFilter] = useState<'todas' | 'hoy' | 'semana' | 'siguiente'>('todas');
 
-  const hoyDate = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
   const getDayDiff = (dateStr: string | null) => {
-    if (!dateStr) return 999;
-    const d = new Date(dateStr);
-    d.setHours(0, 0, 0, 0);
-    return Math.round((d.getTime() - hoyDate.getTime()) / (1000 * 60 * 60 * 24));
+    return getDiasDiferenciaHoy(dateStr);
   };
 
   const filteredClases = useMemo(() => {
@@ -52,7 +44,7 @@ export const ClasesPendientesView: React.FC<ClasesPendientesViewProps> = ({
       if (timelineFilter === 'siguiente') return diff > 7;
       return true;
     });
-  }, [clases, timelineFilter, hoyDate]);
+  }, [clases, timelineFilter]);
 
   // Group classes by date
   const clasesAgrupadas = useMemo(() => {
@@ -169,7 +161,7 @@ export const ClasesPendientesView: React.FC<ClasesPendientesViewProps> = ({
                     <Calendar className="w-3.5 h-3.5" />
                     <span>
                       {esHoy ? 'Hoy • ' : esManana ? 'Mañana • ' : ''}
-                      {fecha}
+                      {formatearFecha(fecha, { formatoLargo: true, conDiaSemanaCompleto: true, textoVacio: 'Sin fecha' })}
                     </span>
                   </div>
                   <div className="h-px bg-slate-800 flex-1" />
@@ -184,8 +176,9 @@ export const ClasesPendientesView: React.FC<ClasesPendientesViewProps> = ({
                     const celdas = Array.isArray(clase.celdas) ? clase.celdas : [];
                     const alumno = alumnos.find((a) => a.id === clase.alumno_id);
                     const telefonoLimpio = alumno?.telefono?.replace(/\D/g, '') || '';
+                    const fechaFormateada = formatearFecha(clase.fecha_realizado, { conDiaSemana: true });
                     const mensajeWsp = encodeURIComponent(
-                      `Hola ${clase.alumno_nombre}! Te recordamos tu clase particular programada para el ${clase.fecha_realizado} a las ${clase.horaInicio || 'horario pactado'} hs.`
+                      `Hola ${clase.alumno_nombre}! Te recordamos tu clase particular programada para el ${fechaFormateada} a las ${clase.horaInicio || 'horario pactado'} hs.`
                     );
 
                     return (

@@ -37,6 +37,24 @@ const MESES_EN: Record<string, string> = {
 let pool: pg.Pool | null = null;
 let isPostgresActive = false;
 
+// Configurar pg para que el tipo DATE (OID 1082) siempre se devuelva como string 'YYYY-MM-DD'
+// sin convertirlo a objeto Date de JavaScript (evita '2026-09-19T00:00:00.000Z' y desfasajes UTC)
+try {
+  pg.types.setTypeParser(1082, (val: string) => val);
+} catch (e) {
+  console.warn('No se pudo registrar parser de fecha en pg:', e);
+}
+
+function limpiarFechaYMD(val: any): string | null {
+  if (!val) return null;
+  const str = String(val).trim();
+  if (str.includes('T')) return str.split('T')[0];
+  if (str.includes(' ')) return str.split(' ')[0];
+  const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  return str.slice(0, 10);
+}
+
 // Inicializa las tablas en PostgreSQL si aún no existen
 async function inicializarTablasPostgres(pgPool: pg.Pool) {
   try {
@@ -497,26 +515,50 @@ const db = {
   async getAlumnos() {
     if (this.isPostgres()) {
       const res = await pool!.query('SELECT * FROM alumnos ORDER BY nombre ASC, id ASC');
-      return res.rows;
+      return res.rows.map((a: any) => ({
+        ...a,
+        fecha_pago: limpiarFechaYMD(a.fecha_pago),
+      }));
     }
-    return [...localAlumnos];
+    return localAlumnos.map((a) => ({
+      ...a,
+      fecha_pago: limpiarFechaYMD(a.fecha_pago),
+    }));
   },
 
   async getAlumnoById(id: number) {
     if (this.isPostgres()) {
       const res = await pool!.query('SELECT * FROM alumnos WHERE id = $1', [id]);
-      return res.rows[0] || null;
+      if (!res.rows[0]) return null;
+      return {
+        ...res.rows[0],
+        fecha_pago: limpiarFechaYMD(res.rows[0].fecha_pago),
+      };
     }
-    return localAlumnos.find((a) => a.id === id) || null;
+    const found = localAlumnos.find((a) => a.id === id);
+    if (!found) return null;
+    return {
+      ...found,
+      fecha_pago: limpiarFechaYMD(found.fecha_pago),
+    };
   },
 
   async getAlumnoByCorreo(correo: string) {
     const norm = (correo || '').trim().toLowerCase();
     if (this.isPostgres()) {
       const res = await pool!.query('SELECT * FROM alumnos WHERE LOWER(correo) = $1', [norm]);
-      return res.rows[0] || null;
+      if (!res.rows[0]) return null;
+      return {
+        ...res.rows[0],
+        fecha_pago: limpiarFechaYMD(res.rows[0].fecha_pago),
+      };
     }
-    return localAlumnos.find((a) => a.correo.toLowerCase() === norm) || null;
+    const found = localAlumnos.find((a) => a.correo.toLowerCase() === norm);
+    if (!found) return null;
+    return {
+      ...found,
+      fecha_pago: limpiarFechaYMD(found.fecha_pago),
+    };
   },
 
   async createAlumno(data: any) {
@@ -631,7 +673,9 @@ const db = {
   async getReservas() {
     if (this.isPostgres()) {
       const res = await pool!.query(`
-        SELECT r.*,
+        SELECT r.id, r.alumno_id,
+               TO_CHAR(r.fecha_realizado, 'YYYY-MM-DD') as fecha_realizado,
+               r.fecha_reservada_texto, r.estado, r.celdas, r.tipo_clase, r.precio, r.indice_hoja, r.codigo, r.created_at,
                a.nombre as alumno_nombre,
                a.apellido as alumno_apellido,
                a.correo as alumno_correo,
@@ -640,12 +684,16 @@ const db = {
           LEFT JOIN alumnos a ON a.id = r.alumno_id
          ORDER BY r.fecha_realizado DESC NULLS LAST, r.id DESC
       `);
-      return res.rows;
+      return res.rows.map((r: any) => ({
+        ...r,
+        fecha_realizado: limpiarFechaYMD(r.fecha_realizado),
+      }));
     }
     return localReservas.map((r) => {
       const al = localAlumnos.find((a) => a.id === r.alumno_id);
       return {
         ...r,
+        fecha_realizado: limpiarFechaYMD(r.fecha_realizado),
         alumno_nombre: al?.nombre,
         alumno_apellido: al?.apellido,
         alumno_correo: al?.correo,
@@ -656,13 +704,29 @@ const db = {
 
   async getReservasByAlumnoId(alumnoId: number) {
     if (this.isPostgres()) {
-      const res = await pool!.query('SELECT * FROM reservas WHERE alumno_id = $1 ORDER BY fecha_realizado ASC', [alumnoId]);
-      return res.rows;
+      const res = await pool!.query(`
+        SELECT id, alumno_id,
+               TO_CHAR(fecha_realizado, 'YYYY-MM-DD') as fecha_realizado,
+               fecha_reservada_texto, estado, celdas, tipo_clase, precio, indice_hoja, codigo, created_at
+          FROM reservas
+         WHERE alumno_id = $1
+         ORDER BY fecha_realizado ASC NULLS LAST, id ASC
+      `, [alumnoId]);
+      return res.rows.map((r: any) => ({
+        ...r,
+        fecha_realizado: limpiarFechaYMD(r.fecha_realizado),
+      }));
     }
-    return localReservas.filter((r) => r.alumno_id === alumnoId);
+    return localReservas
+      .filter((r) => r.alumno_id === alumnoId)
+      .map((r) => ({
+        ...r,
+        fecha_realizado: limpiarFechaYMD(r.fecha_realizado),
+      }));
   },
 
   async createReserva(data: any) {
+    const fechaLimpia = limpiarFechaYMD(data.fecha_realizado);
     if (this.isPostgres()) {
       const res = await pool!.query(
         `INSERT INTO reservas
@@ -671,7 +735,7 @@ const db = {
          RETURNING *`,
         [
           data.alumno_id,
-          data.fecha_realizado,
+          fechaLimpia,
           data.fecha_reservada_texto,
           data.estado || 'debe',
           JSON.stringify(data.celdas || []),
@@ -681,12 +745,14 @@ const db = {
           data.codigo || generarCodigoReserva(),
         ]
       );
-      return res.rows[0];
+      const row = res.rows[0];
+      if (row) row.fecha_realizado = limpiarFechaYMD(row.fecha_realizado);
+      return row;
     }
     const nueva: LocalReserva = {
       id: nextReservaId++,
       alumno_id: Number(data.alumno_id),
-      fecha_realizado: data.fecha_realizado || null,
+      fecha_realizado: fechaLimpia,
       fecha_reservada_texto: data.fecha_reservada_texto || null,
       estado: data.estado || 'debe',
       celdas: Array.isArray(data.celdas) ? data.celdas : [],
@@ -701,6 +767,7 @@ const db = {
   },
 
   async updateReserva(id: number, data: any) {
+    const fechaLimpia = data.fecha_realizado !== undefined ? limpiarFechaYMD(data.fecha_realizado) : undefined;
     if (this.isPostgres()) {
       const res = await pool!.query(
         `UPDATE reservas
@@ -715,18 +782,24 @@ const db = {
         [
           data.estado,
           data.precio !== undefined ? data.precio : null,
-          data.fecha_realizado,
+          fechaLimpia,
           data.fecha_reservada_texto,
           data.tipo_clase,
           data.celdas ? JSON.stringify(data.celdas) : null,
           id,
         ]
       );
-      return res.rows[0];
+      const row = res.rows[0];
+      if (row) row.fecha_realizado = limpiarFechaYMD(row.fecha_realizado);
+      return row;
     }
     const idx = localReservas.findIndex((r) => r.id === id);
     if (idx === -1) return null;
-    localReservas[idx] = { ...localReservas[idx], ...data };
+    localReservas[idx] = {
+      ...localReservas[idx],
+      ...data,
+      ...(fechaLimpia !== undefined ? { fecha_realizado: fechaLimpia } : {}),
+    };
     return localReservas[idx];
   },
 

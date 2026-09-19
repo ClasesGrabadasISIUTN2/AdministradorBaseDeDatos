@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, DollarSign, Save, AlertCircle, Users } from 'lucide-react';
 import { Reserva, Alumno } from '../types';
+import { aFechaInput } from '../utils/date';
 
 interface ReservaModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
   useEffect(() => {
     if (reserva) {
       setAlumnoId(reserva.alumno_id);
-      setFechaRealizado(reserva.fecha_realizado || new Date().toISOString().slice(0, 10));
+      setFechaRealizado(aFechaInput(reserva.fecha_realizado) || new Date().toISOString().slice(0, 10));
       setTipoClase(reserva.tipo_clase || 'estandar_individual');
       setEstado(reserva.estado);
       setPrecio(Number(reserva.precio || 0));
@@ -79,7 +80,7 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
     try {
       await onSave({
         alumno_id: alumnoId,
-        fecha_realizado: fechaRealizado,
+        fecha_realizado: aFechaInput(fechaRealizado),
         fecha_reservada_texto: `Clase ${horaInicio} (${duracionHoras} hs)`,
         tipo_clase: tipoClase,
         estado: estado,

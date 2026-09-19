@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, AlertTriangle, XCircle } from 'lucide-react';
 import { Reserva } from '../types';
 import { api } from '../services/api';
+import { formatearFecha } from '../utils/date';
 
 interface CancelarReservaModalProps {
   isOpen: boolean;
@@ -80,7 +81,7 @@ export const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Fecha Clase:</span>
-              <span className="font-medium text-slate-200">{reserva.fecha_realizado}</span>
+              <span className="font-medium text-slate-200">{formatearFecha(reserva.fecha_realizado, { conDiaSemana: true })}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Precio original:</span>

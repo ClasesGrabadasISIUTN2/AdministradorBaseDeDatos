@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Alumno, Reserva } from '../types';
 import { api } from '../services/api';
+import { formatearFecha } from '../utils/date';
 
 interface AlumnoFichaModalProps {
   isOpen: boolean;
@@ -162,7 +163,7 @@ export const AlumnoFichaModal: React.FC<AlumnoFichaModalProps> = ({
                 {alumno.horas_a_favor || 0} hs
               </div>
               <div className="text-[10px] text-slate-400 mt-1">
-                Pack total: {alumno.pack || 0} hs • Fecha pago: {alumno.fecha_pago || '-'}
+                Pack total: {alumno.pack || 0} hs • Fecha pago: {formatearFecha(alumno.fecha_pago) || '-'}
               </div>
             </div>
 
@@ -290,7 +291,7 @@ export const AlumnoFichaModal: React.FC<AlumnoFichaModalProps> = ({
                             {r.codigo}
                           </td>
                           <td className="py-2.5 px-3">
-                            <div className="font-medium text-slate-200">{r.fecha_realizado}</div>
+                            <div className="font-medium text-slate-200">{formatearFecha(r.fecha_realizado, { conDiaSemana: true })}</div>
                             <div className="text-[10px] text-slate-400">{r.fecha_reservada_texto}</div>
                           </td>
                           <td className="py-2.5 px-3 text-slate-300">
