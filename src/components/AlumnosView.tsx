@@ -14,6 +14,8 @@ import {
   Filter,
   Clock,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { Alumno } from '../types';
 import { formatearFecha, formatearUltimaConexion } from '../utils/date';
@@ -29,6 +31,16 @@ interface AlumnosViewProps {
   onEliminarAlumno: (alumno: Alumno) => void;
 }
 
+export type SortColumn =
+  | 'nombre'
+  | 'ultima_conexion'
+  | 'contacto'
+  | 'horas_pack'
+  | 'deuda'
+  | 'condicion';
+
+export type SortDirection = 'asc' | 'desc';
+
 export const AlumnosView: React.FC<AlumnosViewProps> = ({
   alumnos,
   onOpenNuevoAlumno,
@@ -43,8 +55,30 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
   const [filterDeuda, setFilterDeuda] = useState<'all' | 'con_deuda' | 'sin_deuda'>('all');
   const [filterPack, setFilterPack] = useState<'all' | 'con_pack' | 'sin_pack'>('all');
   const [selectedMateria, setSelectedMateria] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'ultima_conexion' | 'nombre' | 'deuda' | 'horas_pack'>('ultima_conexion');
-  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+  const [sortBy, setSortBy] = useState<SortColumn>('ultima_conexion');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (column: SortColumn) => {
+    if (sortBy === column) {
+      setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortBy(column);
+      if (column === 'nombre' || column === 'contacto') {
+        setSortDirection('asc');
+      } else {
+        setSortDirection('desc');
+      }
+    }
+  };
+
+  const sortColumnLabels: Record<SortColumn, string> = {
+    ultima_conexion: 'Última Conexión',
+    nombre: 'Alumno',
+    contacto: 'Contacto',
+    horas_pack: 'Horas Pack',
+    deuda: 'Deuda Actual',
+    condicion: 'Condición',
+  };
 
   const materiasUnicas = useMemo(() => {
     const set = new Set<string>();
@@ -80,11 +114,14 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
       return true;
     });
 
-    // Ordenamiento por defecto: última conexión a la más vieja (DESC NULLS LAST)
-    return list.sort((a, b) => {
+    // Ordenamiento por columna elegida
+    return [...list].sort((a, b) => {
       if (sortBy === 'ultima_conexion') {
-        const timeA = a.ultima_conexion ? new Date(a.ultima_conexion).getTime() : -Infinity;
-        const timeB = b.ultima_conexion ? new Date(b.ultima_conexion).getTime() : -Infinity;
+        if (!a.ultima_conexion && !b.ultima_conexion) return b.id - a.id;
+        if (!a.ultima_conexion) return 1;
+        if (!b.ultima_conexion) return -1;
+        const timeA = new Date(a.ultima_conexion).getTime();
+        const timeB = new Date(b.ultima_conexion).getTime();
         if (timeA !== timeB) {
           return sortDirection === 'desc' ? timeB - timeA : timeA - timeB;
         }
@@ -92,8 +129,22 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
       }
 
       if (sortBy === 'nombre') {
-        const comp = a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+        const nameA = `${a.nombre} ${a.apellido || ''}`.trim();
+        const nameB = `${b.nombre} ${b.apellido || ''}`.trim();
+        const comp = nameA.localeCompare(nameB, 'es', { sensitivity: 'base' });
         return sortDirection === 'desc' ? -comp : comp;
+      }
+
+      if (sortBy === 'contacto') {
+        const contactA = (a.correo || a.telefono || '').trim().toLowerCase();
+        const contactB = (b.correo || b.telefono || '').trim().toLowerCase();
+        const comp = contactA.localeCompare(contactB, 'es', { sensitivity: 'base' });
+        return sortDirection === 'desc' ? -comp : comp;
+      }
+
+      if (sortBy === 'horas_pack') {
+        const diff = (a.horas_a_favor || 0) - (b.horas_a_favor || 0);
+        return sortDirection === 'desc' ? -diff : diff;
       }
 
       if (sortBy === 'deuda') {
@@ -101,8 +152,14 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
         return sortDirection === 'desc' ? -diff : diff;
       }
 
-      if (sortBy === 'horas_pack') {
-        const diff = (a.horas_a_favor || 0) - (b.horas_a_favor || 0);
+      if (sortBy === 'condicion') {
+        const getCondScore = (al: Alumno) => {
+          const tieneD = (al.deudaTotal || 0) > 0;
+          if (al.condicion_pago === 'Mora' || tieneD) return 2;
+          if ((al.horas_a_favor || 0) > 0) return 0;
+          return 1;
+        };
+        const diff = getCondScore(a) - getCondScore(b);
         return sortDirection === 'desc' ? -diff : diff;
       }
 
@@ -118,6 +175,38 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
     }).format(amount);
   };
 
+  const renderSortHeader = (label: string, column: SortColumn) => {
+    const isActive = sortBy === column;
+    return (
+      <th
+        onClick={() => handleSort(column)}
+        className="py-3 px-4 cursor-pointer hover:text-slate-200 transition select-none group"
+        title={`Ordenar por ${label} (${
+          isActive
+            ? sortDirection === 'desc'
+              ? 'actual: mayor a menor / clic para menor a mayor'
+              : 'actual: menor a mayor / clic para mayor a menor'
+            : 'clic para ordenar'
+        })`}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className={isActive ? 'text-blue-400 font-bold' : ''}>
+            {label}
+          </span>
+          {isActive ? (
+            sortDirection === 'desc' ? (
+              <ArrowDown className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            ) : (
+              <ArrowUp className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            )
+          ) : (
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 opacity-40 group-hover:opacity-100 shrink-0 transition" />
+          )}
+        </div>
+      </th>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Header & Action Bar */}
@@ -131,8 +220,24 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
               {filteredAlumnos.length} {filteredAlumnos.length === 1 ? 'alumno' : 'alumnos'}
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Ordenados por defecto de la última conexión a la más vieja.
+          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span>Orden actual:</span>
+            <span className="text-blue-400 font-medium">
+              {sortColumnLabels[sortBy]} (
+              {sortBy === 'ultima_conexion'
+                ? sortDirection === 'desc'
+                  ? 'más reciente primero'
+                  : 'más antigua primero'
+                : sortBy === 'nombre' || sortBy === 'contacto'
+                ? sortDirection === 'asc'
+                  ? 'A → Z'
+                  : 'Z → A'
+                : sortDirection === 'desc'
+                ? 'mayor a menor'
+                : 'menor a mayor'}
+              )
+            </span>
+            <span className="text-slate-500">• Clic en cualquier columna para alternar</span>
           </p>
         </div>
 
@@ -163,22 +268,24 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
         <select
           value={`${sortBy}_${sortDirection}`}
           onChange={(e) => {
-            const [by, dir] = e.target.value.split('_') as [any, any];
+            const [by, dir] = e.target.value.split('_') as [SortColumn, SortDirection];
             setSortBy(by);
             setSortDirection(dir);
           }}
           className="px-3 py-2 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-medium"
         >
-          <option value="ultima_conexion_desc">
-            ⚡ Última conexión (Más reciente a más vieja) [Por defecto]
-          </option>
-          <option value="ultima_conexion_asc">
-            ⏳ Conexión más antigua primero
-          </option>
-          <option value="nombre_asc">🔤 Nombre: A → Z</option>
-          <option value="nombre_desc">🔤 Nombre: Z → A</option>
-          <option value="deuda_desc">💰 Mayor deuda primero</option>
-          <option value="horas_pack_desc">📦 Más horas de pack</option>
+          <option value="ultima_conexion_desc">⚡ Última conexión: Más reciente primero</option>
+          <option value="ultima_conexion_asc">⏳ Última conexión: Más antigua primero</option>
+          <option value="nombre_asc">👤 Alumno: A → Z (Ascendente)</option>
+          <option value="nombre_desc">👤 Alumno: Z → A (Descendente)</option>
+          <option value="horas_pack_desc">📦 Horas Pack: Mayor a menor</option>
+          <option value="horas_pack_asc">📦 Horas Pack: Menor a mayor</option>
+          <option value="deuda_desc">💰 Deuda: Mayor a menor (Mora)</option>
+          <option value="deuda_asc">💰 Deuda: Menor a mayor (Al día primero)</option>
+          <option value="contacto_asc">📧 Contacto: A → Z</option>
+          <option value="contacto_desc">📧 Contacto: Z → A</option>
+          <option value="condicion_desc">🏷️ Condición: Mora primero</option>
+          <option value="condicion_asc">🏷️ Condición: Normal / Al día primero</option>
         </select>
 
         {/* Filter Deuda */}
@@ -224,39 +331,12 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-800/40 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                <th className="py-3 px-4">Alumno</th>
-                <th
-                  onClick={() => {
-                    if (sortBy === 'ultima_conexion') {
-                      setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'));
-                    } else {
-                      setSortBy('ultima_conexion');
-                      setSortDirection('desc');
-                    }
-                  }}
-                  className="py-3 px-4 cursor-pointer hover:text-slate-200 transition select-none group"
-                  title="Ordenar por última conexión"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className={sortBy === 'ultima_conexion' ? 'text-blue-400 font-bold' : ''}>
-                      Última Conexión
-                    </span>
-                    <ArrowUpDown
-                      className={`w-3.5 h-3.5 transition ${
-                        sortBy === 'ultima_conexion' ? 'text-blue-400' : 'text-slate-500 opacity-50 group-hover:opacity-100'
-                      }`}
-                    />
-                    {sortBy === 'ultima_conexion' && (
-                      <span className="text-[10px] text-blue-400 font-mono lowercase">
-                        {sortDirection === 'desc' ? '▼ reciente' : '▲ vieja'}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th className="py-3 px-4">Contacto</th>
-                <th className="py-3 px-4">Horas Pack</th>
-                <th className="py-3 px-4">Deuda Actual</th>
-                <th className="py-3 px-4">Condición</th>
+                {renderSortHeader('Alumno', 'nombre')}
+                {renderSortHeader('Última Conexión', 'ultima_conexion')}
+                {renderSortHeader('Contacto', 'contacto')}
+                {renderSortHeader('Horas Pack', 'horas_pack')}
+                {renderSortHeader('Deuda Actual', 'deuda')}
+                {renderSortHeader('Condición', 'condicion')}
                 <th className="py-3 px-4 text-right">Acciones</th>
               </tr>
             </thead>
@@ -289,9 +369,6 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
                             >
                               {a.nombre} {a.apellido || ''}
                             </button>
-                            <div className="text-[11px] text-slate-400 font-mono">
-                              ID: #{a.id} • Ingreso: {a.anio_ingreso || '-'}
-                            </div>
                           </div>
                         </div>
                       </td>
