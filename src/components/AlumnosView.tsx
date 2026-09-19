@@ -254,7 +254,6 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
                   </div>
                 </th>
                 <th className="py-3 px-4">Contacto</th>
-                <th className="py-3 px-4">Materia & Estado</th>
                 <th className="py-3 px-4">Horas Pack</th>
                 <th className="py-3 px-4">Deuda Actual</th>
                 <th className="py-3 px-4">Condición</th>
@@ -264,7 +263,7 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
             <tbody className="divide-y divide-slate-800/60 text-xs">
               {filteredAlumnos.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
                     No se encontraron alumnos con los filtros seleccionados.
                   </td>
                 </tr>
@@ -353,16 +352,6 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
                             <span className="text-[11px] text-slate-400">Sin teléfono</span>
                           )}
                         </div>
-                      </td>
-
-                      {/* Materia & Estado */}
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-slate-200 truncate max-w-[180px]">
-                          {a.materia || 'No especificada'}
-                        </div>
-                        <span className="inline-block mt-0.5 px-2 py-0.5 text-[10px] rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                          {a.estado_materia || 'Regular'}
-                        </span>
                       </td>
 
                       {/* Horas Pack */}
