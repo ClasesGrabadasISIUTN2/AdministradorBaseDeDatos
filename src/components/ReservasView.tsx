@@ -104,7 +104,7 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
             Gestión de Todas las Reservas y Clases
           </h2>
           <p className="text-xs text-slate-400">
-            Supervisa estados de pago, cancelaciones, códigos de reserva y miembros grupales.
+            Supervisa estados de pago, fechas agendadas, cancelaciones y alumnos.
           </p>
         </div>
 
@@ -243,7 +243,7 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-800/40 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                <th className="py-3 px-4">Código & Fecha</th>
+                <th className="py-3 px-4">Fecha & Horario</th>
                 <th className="py-3 px-4">Alumno</th>
                 <th className="py-3 px-4">Modalidad & Horas</th>
                 <th className="py-3 px-4">Estado</th>
@@ -265,21 +265,18 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
 
                   return (
                     <tr key={r.id} className="hover:bg-slate-800/30 transition">
-                      {/* Código & Fecha */}
+                      {/* Fecha & Horario */}
                       <td className="py-3 px-4">
-                        <div className="font-mono font-bold text-slate-200 text-xs">
-                          {r.codigo}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-300 font-medium mt-0.5">
-                          <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-slate-200 font-medium">
+                          <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                           <span>{formatearFecha(r.fecha_realizado, { conDiaSemana: true, textoVacio: 'Fecha pendiente' })}</span>
-                          {r.horaInicio && (
-                            <>
-                              <Clock className="w-3 h-3 text-slate-400 ml-1 shrink-0" />
-                              <span className="text-slate-300">{r.horaInicio} hs</span>
-                            </>
-                          )}
                         </div>
+                        {r.horaInicio && (
+                          <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px] mt-0.5 ml-5">
+                            <Clock className="w-3 h-3 text-slate-500 shrink-0" />
+                            <span>{r.horaInicio} hs</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Alumno */}
