@@ -156,19 +156,13 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
               <label className="block font-medium text-slate-300 mb-1">
                 Hora de Inicio
               </label>
-              <select
+              <input
+                type="time"
+                required
                 value={horaInicio}
                 onChange={(e) => setHoraInicio(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-emerald-500 font-mono"
-              >
-                <option value="08:15">08:15 hs</option>
-                <option value="10:00">10:00 hs</option>
-                <option value="12:00">12:00 hs</option>
-                <option value="14:00">14:00 hs</option>
-                <option value="16:00">16:00 hs</option>
-                <option value="18:00">18:00 hs</option>
-                <option value="20:00">20:00 hs</option>
-              </select>
+              />
             </div>
           </div>
 
