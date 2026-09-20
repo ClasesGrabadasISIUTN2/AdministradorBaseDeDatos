@@ -154,9 +154,9 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
 
       if (sortBy === 'condicion') {
         const getCondScore = (al: Alumno) => {
-          const tieneD = (al.deudaTotal || 0) > 0;
-          if (al.condicion_pago === 'Mora' || tieneD) return 2;
-          if ((al.horas_a_favor || 0) > 0) return 0;
+          const cond = al.condicion_pago === 'Mora' ? 'Deudor' : (al.condicion_pago || ((al.deudaTotal || 0) > 0 ? 'Deudor' : 'Normal'));
+          if (cond === 'Deudor') return 3;
+          if (cond === 'Libre') return 2;
           return 1;
         };
         const diff = getCondScore(a) - getCondScore(b);
@@ -284,8 +284,8 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
           <option value="deuda_asc">💰 Deuda: Menor a mayor (Al día primero)</option>
           <option value="contacto_asc">📧 Contacto: A → Z</option>
           <option value="contacto_desc">📧 Contacto: Z → A</option>
-          <option value="condicion_desc">🏷️ Condición: Mora primero</option>
-          <option value="condicion_asc">🏷️ Condición: Normal / Al día primero</option>
+          <option value="condicion_desc">🏷️ Condición: Deudor primero</option>
+          <option value="condicion_asc">🏷️ Condición: Normal / Libre primero</option>
         </select>
 
         {/* Filter Deuda */}
@@ -473,15 +473,26 @@ export const AlumnosView: React.FC<AlumnosViewProps> = ({
 
                       {/* Condición */}
                       <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${
-                            a.condicion_pago === 'Mora' || tieneDeuda
-                              ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
-                              : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                          }`}
-                        >
-                          {a.condicion_pago || (tieneDeuda ? 'Mora' : 'Normal')}
-                        </span>
+                        {(() => {
+                          const cond = a.condicion_pago === 'Mora'
+                            ? 'Deudor'
+                            : (a.condicion_pago || (tieneDeuda ? 'Deudor' : 'Normal'));
+                          const isDeudor = cond === 'Deudor';
+                          const isLibre = cond === 'Libre';
+                          return (
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${
+                                isDeudor
+                                  ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
+                                  : isLibre
+                                  ? 'bg-amber-950/60 text-amber-300 border-amber-800/60'
+                                  : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                              }`}
+                            >
+                              {cond}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Acciones */}

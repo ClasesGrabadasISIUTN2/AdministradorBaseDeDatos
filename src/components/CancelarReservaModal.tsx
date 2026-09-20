@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle, XCircle } from 'lucide-react';
+import { X, AlertTriangle, XCircle, ArrowLeft } from 'lucide-react';
 import { Reserva } from '../types';
 import { api } from '../services/api';
 import { formatearFecha } from '../utils/date';
@@ -58,12 +58,25 @@ export const CancelarReservaModal: React.FC<CancelarReservaModalProps> = ({
               Cancelar Reserva #{reserva.codigo}
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition cursor-pointer"
+              title="Volver"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+              <span>Volver</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+              title="Cerrar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="p-5 space-y-4 text-xs">

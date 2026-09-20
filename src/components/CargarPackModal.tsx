@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Package, Save, AlertCircle } from 'lucide-react';
+import { X, Package, Save, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Alumno } from '../types';
 import { api } from '../services/api';
 import { ConfirmacionModal, DetalleConfirmacion } from './ConfirmacionModal';
@@ -106,12 +106,25 @@ export const CargarPackModal: React.FC<CargarPackModalProps> = ({
               Habilitar / Cargar Pack de Horas
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition cursor-pointer"
+              title="Volver a la sección anterior"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+              <span>Volver</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+              title="Cerrar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">

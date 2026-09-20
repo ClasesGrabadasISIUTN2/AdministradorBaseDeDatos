@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, User, Mail, Phone, BookOpen, Clock, AlertCircle } from 'lucide-react';
+import { X, Save, User, Mail, Phone, BookOpen, Clock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Alumno } from '../types';
 import { formatearFechaHora } from '../utils/date';
 import { ConfirmacionModal, DetalleConfirmacion } from './ConfirmacionModal';
@@ -28,13 +28,21 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
     comentario: '',
     horas_a_favor: 0,
     pack: 0,
-    condicion_pago: 'Normal',
+    condicion_pago: 'Normal' as 'Normal' | 'Libre' | 'Deudor',
     password_hash: '',
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmacion, setShowConfirmacion] = useState(false);
+
+  const normalizarCondicion = (cond?: string | null): 'Normal' | 'Libre' | 'Deudor' => {
+    if (!cond) return 'Normal';
+    if (cond === 'Mora') return 'Deudor';
+    if (cond === 'Libre') return 'Libre';
+    if (cond === 'Deudor') return 'Deudor';
+    return 'Normal';
+  };
 
   useEffect(() => {
     if (alumno) {
@@ -49,7 +57,7 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
         comentario: alumno.comentario || '',
         horas_a_favor: alumno.horas_a_favor || 0,
         pack: alumno.pack || 0,
-        condicion_pago: alumno.condicion_pago || 'Normal',
+        condicion_pago: normalizarCondicion(alumno.condicion_pago),
         password_hash: alumno.password_hash || '',
       });
     } else {
@@ -129,7 +137,7 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
       destacado: (formData.horas_a_favor || 0) > 0,
     },
     {
-      label: 'Condición de Pago',
+      label: 'Condición',
       valor: formData.condicion_pago,
     },
     ...(alumno
@@ -161,12 +169,25 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
               {alumno ? 'Editar Datos del Alumno' : 'Registrar Nuevo Alumno'}
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition cursor-pointer"
+              title="Volver a la sección anterior"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+              <span>Volver</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+              title="Cerrar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
@@ -289,15 +310,16 @@ export const AlumnoModal: React.FC<AlumnoModalProps> = ({
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">
-                Condición Pago
+                Condición
               </label>
               <select
                 value={formData.condicion_pago}
-                onChange={(e) => setFormData({ ...formData, condicion_pago: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, condicion_pago: e.target.value as 'Normal' | 'Libre' | 'Deudor' })}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               >
                 <option value="Normal">Normal</option>
-                <option value="Mora">Mora</option>
+                <option value="Libre">Libre</option>
+                <option value="Deudor">Deudor</option>
               </select>
             </div>
           </div>

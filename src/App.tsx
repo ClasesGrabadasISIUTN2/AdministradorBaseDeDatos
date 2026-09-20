@@ -16,12 +16,98 @@ import { CancelarReservaModal } from './components/CancelarReservaModal';
 import { RegistrarPagoModal } from './components/RegistrarPagoModal';
 import { api } from './services/api';
 import { Alumno, Reserva, DashboardStats, DatabaseStatus } from './types';
-import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { ThemeId, getInitialTheme, applyTheme, THEMES, getNextTheme } from './utils/theme';
 import { TotpAuthScreen } from './components/TotpAuthScreen';
 
+const TAB_LABELS: Record<TabType, string> = {
+  dashboard: 'Panel General',
+  alumnos: 'Alumnos / Usuarios',
+  reservas: 'Todas las Reservas',
+  clases: 'Clases Pendientes',
+  pagos: 'Cobros y Pagos',
+  database: 'Base de Datos',
+};
+
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
+  const [currentTab, setCurrentTab] = useState<TabType>(() => {
+    const hash = window.location.hash.replace('#', '') as TabType;
+    if (['dashboard', 'alumnos', 'reservas', 'clases', 'pagos', 'database'].includes(hash)) {
+      return hash;
+    }
+    return 'dashboard';
+  });
+
+  const [tabHistory, setTabHistory] = useState<TabType[]>([currentTab]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+
+  const navigateToTab = useCallback(
+    (newTab: TabType) => {
+      if (newTab === currentTab) return;
+      const updatedHistory = tabHistory.slice(0, historyIndex + 1);
+      updatedHistory.push(newTab);
+      const newIdx = updatedHistory.length - 1;
+      setTabHistory(updatedHistory);
+      setHistoryIndex(newIdx);
+      setCurrentTab(newTab);
+      try {
+        window.history.pushState({ tab: newTab, index: newIdx }, '', `#${newTab}`);
+      } catch {
+        // ignore in iframe if blocked
+      }
+    },
+    [currentTab, tabHistory, historyIndex]
+  );
+
+  const handleGoBack = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIdx = historyIndex - 1;
+      const prevTab = tabHistory[prevIdx];
+      setHistoryIndex(prevIdx);
+      setCurrentTab(prevTab);
+      try {
+        window.history.pushState({ tab: prevTab, index: prevIdx }, '', `#${prevTab}`);
+      } catch {
+        // ignore
+      }
+    }
+  }, [historyIndex, tabHistory]);
+
+  const handleGoForward = useCallback(() => {
+    if (historyIndex < tabHistory.length - 1) {
+      const nextIdx = historyIndex + 1;
+      const nextTab = tabHistory[nextIdx];
+      setHistoryIndex(nextIdx);
+      setCurrentTab(nextTab);
+      try {
+        window.history.pushState({ tab: nextTab, index: nextIdx }, '', `#${nextTab}`);
+      } catch {
+        // ignore
+      }
+    }
+  }, [historyIndex, tabHistory]);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && e.state.tab) {
+        setCurrentTab(e.state.tab);
+        if (typeof e.state.index === 'number') {
+          setHistoryIndex(e.state.index);
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const canGoBack = historyIndex > 0;
+  const previousTab = canGoBack ? tabHistory[historyIndex - 1] : null;
+  const previousTabName = previousTab ? TAB_LABELS[previousTab] : '';
+
+  const canGoForward = historyIndex < tabHistory.length - 1;
+  const nextTab = canGoForward ? tabHistory[historyIndex + 1] : null;
+  const nextTabName = nextTab ? TAB_LABELS[nextTab] : '';
+  const currentTabName = TAB_LABELS[currentTab] || currentTab;
 
   // TOTP Security Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -337,10 +423,16 @@ export default function App() {
         dbStatus={dbStatus}
         onRefresh={() => loadAllData(false)}
         isRefreshing={refreshing}
-        onOpenDbConfig={() => setCurrentTab('database')}
+        onOpenDbConfig={() => navigateToTab('database')}
         theme={theme}
         onThemeChange={handleThemeChange}
         onLogout={handleLogout}
+        canGoBack={canGoBack}
+        onGoBack={handleGoBack}
+        previousTabName={previousTabName}
+        canGoForward={canGoForward}
+        onGoForward={handleGoForward}
+        nextTabName={nextTabName}
       />
 
       {/* Main Layout Container */}
@@ -348,7 +440,7 @@ export default function App() {
         {/* Left Sidebar */}
         <Sidebar
           currentTab={currentTab}
-          onSelectTab={setCurrentTab}
+          onSelectTab={navigateToTab}
           badgeCounts={badgeCounts}
           theme={theme}
           onThemeChange={handleThemeChange}
@@ -356,6 +448,30 @@ export default function App() {
 
         {/* Content View Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto overflow-y-auto">
+          {/* Breadcrumb Navigation Bar with Back Arrow */}
+          {canGoBack && (
+            <div className="mb-4 flex items-center justify-between bg-slate-900/80 border border-slate-800 px-3.5 py-2 rounded-xl shadow-xs">
+              <button
+                onClick={handleGoBack}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-200 hover:text-white group cursor-pointer transition"
+                title={`Volver a ${previousTabName}`}
+              >
+                <span className="p-1 rounded-md bg-slate-800 border border-slate-700 text-blue-400 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition shadow-xs">
+                  <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                </span>
+                <span>
+                  Volver a <span className="text-blue-400 font-bold">{previousTabName}</span>
+                </span>
+              </button>
+              <div className="text-[11px] text-slate-400 font-medium hidden sm:flex items-center gap-1.5">
+                <span>Sección actual:</span>
+                <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-200 font-semibold border border-slate-700">
+                  {currentTabName}
+                </span>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3 text-slate-400">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -369,7 +485,7 @@ export default function App() {
                   alumnos={alumnos}
                   reservas={reservas}
                   clasesPendientes={clasesPendientes}
-                  onNavigate={setCurrentTab}
+                  onNavigate={navigateToTab}
                   onOpenNuevoAlumno={handleOpenNuevoAlumno}
                   onOpenNuevaReserva={handleOpenNuevaReserva}
                   onOpenRegistrarPago={handleOpenRegistrarPago}

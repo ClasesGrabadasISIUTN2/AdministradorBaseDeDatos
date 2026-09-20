@@ -310,8 +310,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         >
                           {alumno.nombre} {alumno.apellido || ''}
                         </button>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-950/70 text-rose-300 border border-rose-800/60">
-                          {alumno.condicion_pago || 'Mora'}
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-950/70 text-rose-300 border border-rose-800/60">
+                          {alumno.condicion_pago === 'Mora' ? 'Deudor' : (alumno.condicion_pago || 'Deudor')}
                         </span>
                       </div>
                       <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">

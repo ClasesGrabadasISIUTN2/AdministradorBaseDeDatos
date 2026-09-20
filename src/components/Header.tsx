@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, ShieldCheck, LogOut } from 'lucide-react';
+import { RefreshCw, ShieldCheck, LogOut, ArrowLeft, ArrowRight } from 'lucide-react';
 import { DatabaseStatus } from '../types';
 import { ThemeSelector } from './ThemeSelector';
 import { ThemeId } from '../utils/theme';
@@ -12,6 +12,12 @@ interface HeaderProps {
   theme: ThemeId;
   onThemeChange: (themeId: ThemeId) => void;
   onLogout?: () => void;
+  canGoBack?: boolean;
+  onGoBack?: () => void;
+  previousTabName?: string;
+  canGoForward?: boolean;
+  onGoForward?: () => void;
+  nextTabName?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,11 +28,48 @@ export const Header: React.FC<HeaderProps> = ({
   theme,
   onThemeChange,
   onLogout,
+  canGoBack = false,
+  onGoBack,
+  previousTabName,
+  canGoForward = false,
+  onGoForward,
+  nextTabName,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-slate-100 px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
       <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
         <div className="flex items-center gap-2.5">
+          {/* Navigation Arrow: Volver atrás */}
+          {canGoBack && onGoBack && (
+            <button
+              onClick={onGoBack}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-200 hover:text-white text-xs font-semibold shadow-xs transition group cursor-pointer"
+              title={previousTabName ? `Volver a ${previousTabName}` : 'Volver a la sección anterior'}
+              aria-label="Volver atrás"
+            >
+              <ArrowLeft className="w-4 h-4 text-blue-400 group-hover:-translate-x-0.5 transition-transform" />
+              <span className="inline font-medium">Volver</span>
+              {previousTabName && (
+                <span className="hidden md:inline text-slate-400 font-normal">
+                  ({previousTabName})
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Navigation Arrow: Avanzar (si volvió atrás) */}
+          {canGoForward && onGoForward && (
+            <button
+              onClick={onGoForward}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium shadow-xs transition group cursor-pointer"
+              title={nextTabName ? `Avanzar a ${nextTabName}` : 'Avanzar'}
+              aria-label="Avanzar"
+            >
+              <span className="hidden sm:inline">Avanzar</span>
+              <ArrowRight className="w-3.5 h-3.5 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
+
           <div className="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-lg shadow-sm">
             U
           </div>

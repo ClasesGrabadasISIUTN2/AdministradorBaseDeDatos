@@ -231,7 +231,7 @@ let localAlumnos: LocalAlumno[] = [
     fecha_pago: offsetDays(-40),
     dinero_debe: 16000,
     pack: 0,
-    condicion_pago: 'Mora',
+    condicion_pago: 'Deudor',
     ultima_conexion: offsetHoursIso(-120), // Conectada hace 5 días
     created_at: offsetDays(-45),
     contrasenas_intentadas: [],

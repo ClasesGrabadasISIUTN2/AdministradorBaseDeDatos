@@ -13,6 +13,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ExternalLink,
+  ArrowLeft,
 } from 'lucide-react';
 import { Alumno, Reserva } from '../types';
 import { api } from '../services/api';
@@ -93,15 +94,26 @@ export const AlumnoFichaModal: React.FC<AlumnoFichaModalProps> = ({
                 <h3 className="font-bold text-slate-100 text-lg">
                   {alumno.nombre} {alumno.apellido || ''}
                 </h3>
-                <span
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                    (alumno.deudaTotal || 0) > 0
-                      ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
-                      : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                  }`}
-                >
-                  {alumno.condicion_pago || ((alumno.deudaTotal || 0) > 0 ? 'Mora' : 'Normal')}
-                </span>
+                {(() => {
+                  const cond = alumno.condicion_pago === 'Mora'
+                    ? 'Deudor'
+                    : (alumno.condicion_pago || ((alumno.deudaTotal || 0) > 0 ? 'Deudor' : 'Normal'));
+                  const isDeudor = cond === 'Deudor';
+                  const isLibre = cond === 'Libre';
+                  return (
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
+                        isDeudor
+                          ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
+                          : isLibre
+                          ? 'bg-amber-950/60 text-amber-300 border-amber-800/60'
+                          : 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                      }`}
+                    >
+                      {cond}
+                    </span>
+                  );
+                })()}
               </div>
               <p className="text-xs text-slate-400">
                 ID Alumno: #{alumno.id} • Registrado el {new Date(alumno.created_at).toLocaleDateString('es-AR')}
@@ -109,12 +121,23 @@ export const AlumnoFichaModal: React.FC<AlumnoFichaModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition cursor-pointer"
+              title="Volver a la vista anterior"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+              <span>Volver</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+              title="Cerrar ficha"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content */}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Key, Save, AlertCircle } from 'lucide-react';
+import { X, Key, Save, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Alumno } from '../types';
 import { api } from '../services/api';
 
@@ -52,12 +52,25 @@ export const CambiarClaveModal: React.FC<CambiarClaveModalProps> = ({
               Modificar Contraseña
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition cursor-pointer"
+              title="Volver"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+              <span>Volver</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+              title="Cerrar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-3.5 text-xs">
