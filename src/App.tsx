@@ -375,6 +375,46 @@ export default function App() {
     }
   };
 
+  const handleBulkEliminarReservas = async (ids: number[]) => {
+    try {
+      await api.bulkEliminarReservas(ids);
+      showToast(`Se eliminaron ${ids.length} reservas correctamente`);
+      await loadAllData(true);
+    } catch (err: any) {
+      showToast('Error al eliminar reservas: ' + err.message, 'error');
+    }
+  };
+
+  const handleBulkCancelarReservas = async (ids: number[], porcentaje: number) => {
+    try {
+      await api.bulkCancelarReservas(ids, porcentaje);
+      showToast(`Se cancelaron ${ids.length} reservas con cargo del ${porcentaje}%`);
+      await loadAllData(true);
+    } catch (err: any) {
+      showToast('Error al cancelar reservas: ' + err.message, 'error');
+    }
+  };
+
+  const handleBulkCobrarReservas = async (ids: number[]) => {
+    try {
+      await api.registrarPago(ids);
+      showToast(`Se registraron como pagadas ${ids.length} reservas`);
+      await loadAllData(true);
+    } catch (err: any) {
+      showToast('Error al cobrar reservas: ' + err.message, 'error');
+    }
+  };
+
+  const handleBulkCambiarEstadoReservas = async (ids: number[], estado: string) => {
+    try {
+      await api.bulkCambiarEstadoReservas(ids, estado);
+      showToast(`Se actualizó el estado a "${estado}" para ${ids.length} reservas`);
+      await loadAllData(true);
+    } catch (err: any) {
+      showToast('Error al actualizar reservas: ' + err.message, 'error');
+    }
+  };
+
   // Pagos Handlers
   const handleOpenRegistrarPago = (alumnoId?: number) => {
     setPreselectedAlumnoIdParaPago(alumnoId || null);
@@ -517,6 +557,10 @@ export default function App() {
                   onMarcarPagada={handleMarcarPagadaDirecto}
                   onEliminarReserva={handleEliminarReserva}
                   onVerAlumnoPorId={handleVerAlumnoPorId}
+                  onBulkEliminar={handleBulkEliminarReservas}
+                  onBulkCancelar={handleBulkCancelarReservas}
+                  onBulkCobrar={handleBulkCobrarReservas}
+                  onBulkCambiarEstado={handleBulkCambiarEstadoReservas}
                 />
               )}
 

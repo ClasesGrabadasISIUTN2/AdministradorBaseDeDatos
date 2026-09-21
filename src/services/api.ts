@@ -114,6 +114,36 @@ export const api = {
     return res.json();
   },
 
+  async bulkEliminarReservas(ids: number[]): Promise<{ ok: boolean; eliminadas: number }> {
+    const res = await fetch('/api/admin/reservas/bulk-eliminar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) throw new Error('Error al eliminar reservas seleccionadas');
+    return res.json();
+  },
+
+  async bulkCancelarReservas(ids: number[], porcentajeCobro: number): Promise<{ ok: boolean; canceladas: number }> {
+    const res = await fetch('/api/admin/reservas/bulk-cancelar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, porcentajeCobro }),
+    });
+    if (!res.ok) throw new Error('Error al cancelar reservas seleccionadas');
+    return res.json();
+  },
+
+  async bulkCambiarEstadoReservas(ids: number[], estado: string): Promise<{ ok: boolean; actualizadas: number }> {
+    const res = await fetch('/api/admin/reservas/bulk-estado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, estado }),
+    });
+    if (!res.ok) throw new Error('Error al actualizar estado de reservas');
+    return res.json();
+  },
+
   // Clases Pendientes
   async getClasesPendientes(): Promise<Reserva[]> {
     const res = await fetch('/api/admin/clases-pendientes');

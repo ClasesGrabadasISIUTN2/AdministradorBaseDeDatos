@@ -1147,6 +1147,67 @@ app.post('/api/admin/reservas/:id/cancelar', async (req: Request, res: Response)
   }
 });
 
+// Bulk Actions para Reservas
+app.post('/api/admin/reservas/bulk-eliminar', async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Lista de IDs no proporcionada o vacía' });
+    }
+    for (const id of ids) {
+      await db.deleteReserva(Number(id));
+    }
+    res.json({ ok: true, eliminadas: ids.length });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/reservas/bulk-cancelar', async (req: Request, res: Response) => {
+  try {
+    const { ids, porcentajeCobro } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Lista de IDs no proporcionada o vacía' });
+    }
+    const todas = await db.getReservas();
+    const porcentaje = Number(porcentajeCobro || 0);
+    for (const id of ids) {
+      const resv = todas.find((r: any) => r.id === Number(id));
+      if (resv) {
+        const precioBase = Number(resv.precio || 0);
+        let nuevoPrecio = 0;
+        if (porcentaje === 25) {
+          nuevoPrecio = Math.round(precioBase * 0.25);
+        } else if (porcentaje === 100) {
+          nuevoPrecio = precioBase;
+        }
+        await db.updateReserva(Number(id), {
+          estado: 'cancelada',
+          precio: nuevoPrecio,
+        });
+      }
+    }
+    res.json({ ok: true, canceladas: ids.length });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/reservas/bulk-estado', async (req: Request, res: Response) => {
+  try {
+    const { ids, estado } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !estado) {
+      return res.status(400).json({ ok: false, error: 'Parámetros inválidos' });
+    }
+    for (const id of ids) {
+      await db.updateReserva(Number(id), { estado });
+    }
+    res.json({ ok: true, actualizadas: ids.length });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // 4. Clases Pendientes
 app.get('/api/admin/clases-pendientes', async (req: Request, res: Response) => {
   try {
