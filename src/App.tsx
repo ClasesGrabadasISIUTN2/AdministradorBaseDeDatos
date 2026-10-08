@@ -14,6 +14,7 @@ import { CambiarClaveModal } from './components/CambiarClaveModal';
 import { ReservaModal } from './components/ReservaModal';
 import { CancelarReservaModal } from './components/CancelarReservaModal';
 import { RegistrarPagoModal } from './components/RegistrarPagoModal';
+import { WhatsAppReservaModal, WhatsAppReservaInfo } from './components/WhatsAppReservaModal';
 import { api } from './services/api';
 import { Alumno, Reserva, DashboardStats, DatabaseStatus } from './types';
 import { CheckCircle2, AlertCircle, X, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -214,6 +215,9 @@ export default function App() {
   const [isRegistrarPagoModalOpen, setIsRegistrarPagoModalOpen] = useState(false);
   const [preselectedAlumnoIdParaPago, setPreselectedAlumnoIdParaPago] = useState<number | null>(null);
 
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [whatsAppModalItems, setWhatsAppModalItems] = useState<WhatsAppReservaInfo[]>([]);
+
   // Fetch all core data
   const loadAllData = useCallback(async (silent = false) => {
     if (!isAuthenticated) return;
@@ -332,20 +336,96 @@ export default function App() {
     setIsReservaModalOpen(true);
   };
 
-  const handleSaveReserva = async (data: any) => {
+  const handleSaveReserva = async (data: any, notificarWhatsApp: boolean = true) => {
+    let whatsAppItems: WhatsAppReservaInfo[] = [];
+
     if (selectedReservaParaEditar) {
       await api.updateReserva(selectedReservaParaEditar.id, data);
       showToast('Reserva actualizada correctamente');
+      if (notificarWhatsApp) {
+        const al = alumnos.find((a) => a.id === data.alumno_id || a.id === selectedReservaParaEditar.alumno_id);
+        whatsAppItems = [
+          {
+            alumno: al || null,
+            alumnoNombre: al?.nombre?.trim() || selectedReservaParaEditar.alumno_nombre || 'Alumno',
+            alumnoTelefono: al?.telefono || selectedReservaParaEditar.alumno_telefono || '',
+            fechaRealizado: data.fecha_realizado || selectedReservaParaEditar.fecha_realizado,
+            horaInicio: data.horaInicio || selectedReservaParaEditar.horaInicio,
+            duracionHoras: data.duracionHoras || (Array.isArray(data.celdas) ? data.celdas.length : 1),
+            estado: data.estado || selectedReservaParaEditar.estado,
+          },
+        ];
+      }
     } else if (Array.isArray(data)) {
       for (const item of data) {
         await api.createReserva(item);
       }
       showToast(`Se agendaron ${data.length} reservas grupales independientes con éxito`);
+      if (notificarWhatsApp) {
+        whatsAppItems = data.map((item: any) => {
+          const al = alumnos.find((a) => a.id === item.alumno_id);
+          return {
+            alumno: al || null,
+            alumnoNombre: al?.nombre?.trim() || 'Alumno',
+            alumnoTelefono: al?.telefono || '',
+            fechaRealizado: item.fecha_realizado,
+            horaInicio: item.horaInicio,
+            duracionHoras: item.duracionHoras || (Array.isArray(item.celdas) ? item.celdas.length : 2),
+            estado: item.estado,
+          };
+        });
+      }
     } else {
       await api.createReserva(data);
       showToast('Nueva reserva agendada con éxito');
+      if (notificarWhatsApp) {
+        const al = alumnos.find((a) => a.id === data.alumno_id);
+        whatsAppItems = [
+          {
+            alumno: al || null,
+            alumnoNombre: al?.nombre?.trim() || 'Alumno',
+            alumnoTelefono: al?.telefono || '',
+            fechaRealizado: data.fecha_realizado,
+            horaInicio: data.horaInicio,
+            duracionHoras: data.duracionHoras || (Array.isArray(data.celdas) ? data.celdas.length : 2),
+            estado: data.estado,
+          },
+        ];
+      }
     }
     await loadAllData(true);
+
+    if (notificarWhatsApp && whatsAppItems.length > 0) {
+      setWhatsAppModalItems(whatsAppItems);
+      setIsWhatsAppModalOpen(true);
+    }
+  };
+
+  const handleOpenWhatsAppReserva = (reserva: Reserva) => {
+    const al = alumnos.find((a) => a.id === reserva.alumno_id);
+    const celdas = Array.isArray(reserva.celdas) ? reserva.celdas : [];
+
+    let hora = reserva.horaInicio || '';
+    let duracion = Number(reserva.horas) || (celdas.length > 0 ? celdas.length : 1);
+    if (!hora && reserva.fecha_reservada_texto) {
+      const matchHora = reserva.fecha_reservada_texto.match(/(\d{1,2}:\d{2})/);
+      if (matchHora) hora = matchHora[1];
+      const matchDur = reserva.fecha_reservada_texto.match(/\((\d+)\s*(?:hora|horas|h|hs)\)/i);
+      if (matchDur) duracion = parseInt(matchDur[1], 10);
+    }
+
+    setWhatsAppModalItems([
+      {
+        alumno: al || null,
+        alumnoNombre: al?.nombre?.trim() || reserva.alumno_nombre || 'Alumno',
+        alumnoTelefono: al?.telefono || reserva.alumno_telefono || '',
+        fechaRealizado: reserva.fecha_realizado,
+        horaInicio: hora || '10:00',
+        duracionHoras: duracion,
+        estado: reserva.estado,
+      },
+    ]);
+    setIsWhatsAppModalOpen(true);
   };
 
   const handleOpenCancelarReserva = (reserva: Reserva) => {
@@ -557,6 +637,7 @@ export default function App() {
                   onMarcarPagada={handleMarcarPagadaDirecto}
                   onEliminarReserva={handleEliminarReserva}
                   onVerAlumnoPorId={handleVerAlumnoPorId}
+                  onWhatsAppReserva={handleOpenWhatsAppReserva}
                   onBulkEliminar={handleBulkEliminarReservas}
                   onBulkCancelar={handleBulkCancelarReservas}
                   onBulkCobrar={handleBulkCobrarReservas}
@@ -661,6 +742,12 @@ export default function App() {
           showToast('Pago registrado correctamente');
           loadAllData(true);
         }}
+      />
+
+      <WhatsAppReservaModal
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => setIsWhatsAppModalOpen(false)}
+        items={whatsAppModalItems}
       />
     </div>
   );

@@ -24,6 +24,7 @@ import {
   MinusSquare,
   Layers,
   HelpCircle,
+  MessageSquare,
 } from 'lucide-react';
 import { Reserva, Alumno } from '../types';
 import { formatearFecha, getDiasDiferenciaHoy, extraerFechaYMD } from '../utils/date';
@@ -38,6 +39,7 @@ interface ReservasViewProps {
   onMarcarPagada: (reservaId: number, alumnoId: number) => void;
   onEliminarReserva: (reservaId: number) => void;
   onVerAlumnoPorId: (alumnoId: number) => void;
+  onWhatsAppReserva?: (reserva: Reserva) => void;
   onBulkEliminar?: (ids: number[]) => Promise<void>;
   onBulkCancelar?: (ids: number[], porcentaje: number) => Promise<void>;
   onBulkCobrar?: (ids: number[]) => Promise<void>;
@@ -63,6 +65,7 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
   onMarcarPagada,
   onEliminarReserva,
   onVerAlumnoPorId,
+  onWhatsAppReserva,
   onBulkEliminar,
   onBulkCancelar,
   onBulkCobrar,
@@ -900,6 +903,15 @@ export const ReservasView: React.FC<ReservasViewProps> = ({
                               title="Cancelar reserva"
                             >
                               <XCircle className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {onWhatsAppReserva && (
+                            <button
+                              onClick={() => onWhatsAppReserva(r)}
+                              className="p-1.5 rounded hover:bg-emerald-950/60 text-slate-400 hover:text-emerald-400 transition cursor-pointer"
+                              title="Enviar o reenviar mensaje de reserva por WhatsApp"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
                             </button>
                           )}
                           <button

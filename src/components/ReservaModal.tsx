@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Info,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
 import { Reserva, Alumno } from '../types';
 import { aFechaInput, formatearFecha } from '../utils/date';
@@ -22,7 +23,7 @@ import { ConfirmacionModal, DetalleConfirmacion } from './ConfirmacionModal';
 interface ReservaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: any, notificarWhatsApp?: boolean) => Promise<void>;
   reserva?: Reserva | null;
   alumnos: Alumno[];
 }
@@ -43,12 +44,13 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
   const [duracionHoras, setDuracionHoras] = useState<number>(2);
   const [tipoClase, setTipoClase] = useState<string>('estandar_individual');
   const [estado, setEstado] = useState<string>('debe');
-  const [precio, setPrecio] = useState<number>(8000);
+  const [precio, setPrecio] = useState<number | string>(8000);
   const [integrantesInput, setIntegrantesInput] = useState<string>('');
 
   // Alumno 2 (Integrante Grupal - Segundo Modal Sincronizado) State
   const [alumnoId2, setAlumnoId2] = useState<number>(alumnos[1]?.id || alumnos[0]?.id || 2);
   const [estado2, setEstado2] = useState<string>('debe');
+  const [notificarWhatsApp, setNotificarWhatsApp] = useState<boolean>(true);
 
   // Loading & Error States
   const [loading, setLoading] = useState<boolean>(false);
@@ -153,7 +155,9 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
           fecha_reservada_texto: `Clase ${horaInicio} (${duracionHoras} hs)`,
           tipo_clase: tipoClase,
           estado: estado,
-          precio: precio,
+          precio: Number(precio) || 0,
+          horaInicio,
+          duracionHoras,
           celdas,
           integrantes: [alumno2Seleccionado.correo],
         };
@@ -164,12 +168,14 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
           fecha_reservada_texto: `Clase ${horaInicio} (${duracionHoras} hs)`,
           tipo_clase: tipoClase,
           estado: estado2,
-          precio: precio,
+          precio: Number(precio) || 0,
+          horaInicio,
+          duracionHoras,
           celdas,
           integrantes: alumnoSeleccionado ? [alumnoSeleccionado.correo] : [],
         };
 
-        await onSave([reserva1, reserva2]);
+        await onSave([reserva1, reserva2], notificarWhatsApp);
       } else {
         const integrantes = integrantesInput
           .split(',')
@@ -182,10 +188,12 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
           fecha_reservada_texto: `Clase ${horaInicio} (${duracionHoras} hs)`,
           tipo_clase: tipoClase,
           estado: estado,
-          precio: precio,
+          precio: Number(precio) || 0,
+          horaInicio,
+          duracionHoras,
           celdas,
           integrantes,
-        });
+        }, notificarWhatsApp);
       }
 
       setShowConfirmacion(false);
@@ -267,9 +275,20 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
         },
         {
           label: 'Precio Individual',
-          valor: `${formatMoney(precio)} c/u`,
+          valor: `${formatMoney(Number(precio) || 0)} c/u`,
           destacado: true,
           mono: true,
+        },
+        {
+          label: 'Notificar por WhatsApp',
+          valor: notificarWhatsApp ? (
+            <span className="text-cyan-400 font-semibold flex items-center gap-1">
+              <MessageSquare className="w-3.5 h-3.5" />
+              Sí (se enviará confirmación a ambos)
+            </span>
+          ) : (
+            <span className="text-slate-400">No enviar</span>
+          ),
         },
       ]
     : [
@@ -296,12 +315,25 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
         },
         {
           label: 'Importe / Precio',
-          valor: formatMoney(precio),
+          valor: formatMoney(Number(precio) || 0),
           destacado: true,
         },
         {
           label: 'Estado de Pago',
           valor: estadoLabels[estado] || estado,
+        },
+        {
+          label: 'Notificar por WhatsApp',
+          valor: notificarWhatsApp ? (
+            <span className="text-emerald-400 font-semibold flex items-center gap-1">
+              <MessageSquare className="w-3.5 h-3.5" />
+              {alumnoSeleccionado?.telefono
+                ? `Sí (al ${alumnoSeleccionado.telefono})`
+                : `Sí (abrir chat para ${alumnoSeleccionado?.nombre || 'alumno'})`}
+            </span>
+          ) : (
+            <span className="text-slate-400">No enviar</span>
+          ),
         },
         ...(integrantesInput.trim()
           ? [
@@ -484,9 +516,18 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
                   <input
                     type="number"
                     min={0}
-                    step={500}
+                    step="any"
                     value={precio}
-                    onChange={(e) => setPrecio(parseInt(e.target.value, 10) || 0)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setPrecio('');
+                      } else {
+                        const num = Number(val);
+                        setPrecio(isNaN(num) ? '' : num);
+                      }
+                    }}
+                    placeholder="0"
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-emerald-500 font-mono"
                   />
                 </div>
@@ -661,7 +702,7 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
                     <div>
                       <span className="text-slate-400">Precio Individual:</span>{' '}
                       <span className="font-mono font-bold text-emerald-400">
-                        {formatMoney(precio)}
+                        {formatMoney(Number(precio) || 0)}
                       </span>
                     </div>
                   </div>
@@ -700,11 +741,32 @@ export const ReservaModal: React.FC<ReservaModalProps> = ({
           </div>
 
           {/* Footer con Acciones */}
-          <div className="flex items-center justify-between p-4 sm:p-5 border-t border-slate-800 bg-slate-800/40">
-            <div className="text-slate-400 text-[11px] hidden sm:block">
-              {isDualModal
-                ? 'Se guardarán 2 reservas con sus respectivos estados de cobro.'
-                : 'Se guardará 1 reserva individual en la agenda.'}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 sm:p-5 border-t border-slate-800 bg-slate-800/40">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs text-slate-300 hover:text-slate-100 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={notificarWhatsApp}
+                  onChange={(e) => setNotificarWhatsApp(e.target.checked)}
+                  className="table-checkbox"
+                />
+                <span className="flex items-center gap-1.5 font-medium">
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>
+                    Enviar WhatsApp a{' '}
+                    <strong className="text-white">
+                      {isDualModal
+                        ? `${alumnoSeleccionado?.nombre || 'Titular'} e ${alumno2Seleccionado?.nombre || 'Integrante'}`
+                        : alumnoSeleccionado?.nombre || 'alumno'}
+                    </strong>
+                    {alumnoSeleccionado?.telefono && !isDualModal && (
+                      <span className="text-emerald-400 font-mono ml-1">
+                        ({alumnoSeleccionado.telefono})
+                      </span>
+                    )}
+                  </span>
+                </span>
+              </label>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
